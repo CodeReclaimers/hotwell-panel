@@ -19,7 +19,7 @@ import pytest
 from hotwell.simulator import DT
 
 from hotwell_panel.replay import verify_session
-from hotwell_panel.session import RUNNING, SimSession, tick_of
+from hotwell_panel.session import ENDED, RUNNING, SimSession, tick_of
 from hotwell_panel.sessionlog import LogRecord, to_scenario_dict
 
 REPO = Path(__file__).resolve().parents[1]
@@ -41,7 +41,7 @@ def drive(session: SimSession, until_tick: int, script=None) -> None:
 
 
 @pytest.mark.parametrize("scenario_ref,until,script_desc", [
-    ("builtin:cp1_trip_unrecovered", 8600, "no operator action (cascade to dead)"),
+    ("builtin:cp1_trip_unrecovered", 20000, "cascade run to termination"),
 ])
 def test_replay_reproduces_state_history_hash(tmp_path, scenario_ref, until,
                                               script_desc):
@@ -56,6 +56,9 @@ def test_replay_reproduces_state_history_hash(tmp_path, scenario_ref, until,
         7000: lambda ss: ss.inject_event("set_air_ingress", {"value": 0.02}),
     }
     drive(s, until, script)
+    # The run must actually terminate, so the replay covers the early-break
+    # branch where both runs have to agree on WHERE they stopped.
+    assert s.state == ENDED, f"expected termination, got {s.state}"
 
     session_path = s.export(stamp="test")
     scenario_path = tmp_path / "derived.yaml"
@@ -172,3 +175,80 @@ def test_session_to_scenario_cli_is_a_gate(tmp_path):
     print("\n" + proc.stdout.strip())
     assert proc.returncode == 0, proc.stdout + proc.stderr
     assert "MATCH" in proc.stdout
+
+
+def test_injection_on_the_same_tick_as_a_scenario_event(tmp_path):
+    """The genuine collision: inject at exactly the tick the scenario fires.
+
+    `cp1_trip_unrecovered` trips CP-1 at t = 300 s = tick 6000. An injection
+    lands at the head of the unconsumed portion of the core's event list, so it
+    is applied *before* the scripted event on that tick. Both must apply, and
+    the derived scenario must reproduce that order — pinned here because it is
+    what replay depends on.
+    """
+    s = SimSession(sessions_dir=tmp_path)
+    s.load("builtin:cp1_trip_unrecovered")
+    s.run()
+    # FP-1, not the standby FP-2: `_trip_pump` only acts on a running pump, so
+    # tripping a standby would be a no-op and prove nothing about the collision.
+    drive(s, 6100, {6000: lambda ss: ss.inject_event(
+        "trip_pump", {"target": "fp1", "reason": "collision"})})
+
+    at6000 = [(r.source, r.kind, r.payload.get("target"))
+              for r in s.finalize_log().records if r.tick == 6000]
+    print(f"\n  tick 6000 records: {at6000}")
+    assert at6000 == [("instructor", "trip_pump", "fp1"),
+                      ("scenario", "trip_pump", "cp1")], at6000
+    # both actually took effect
+    assert s.sim.disc.pump_modes["cp1"] == "tripped"
+    assert s.sim.disc.pump_modes["fp1"] == "tripped"
+    # ...and both joined the first-out record, injection first
+    labels = [lbl for _, lbl in s.sim.engine.first_out]
+    assert labels[:2] == ["FP1_TRIP:collision", "CP1_TRIP:overload"], labels
+
+    r = verify_session(s.export(stamp="collide"), tmp_path / "collide.yaml")
+    print(f"  hash live {r['expected_hash'][:16]} replay {r['actual_hash'][:16]}")
+    assert r["match"]
+
+
+def test_conflicting_same_key_actions_defer_instead_of_collapsing(tmp_path):
+    """ACK-ALL sends one alarm.ack per window; last-wins would lose all but one."""
+    s = SimSession(sessions_dir=tmp_path)
+    s.load("builtin:cp1_trip_unrecovered")
+    s.run()
+    # Drive into the casualty far enough that two alarms are active at once.
+    drive(s, 7300)
+    active = [a for a, st in s.sim.last_obs.alarms if st == "active"]
+    assert len(active) >= 2, active
+    for aid in active[:2]:
+        s.submit_action({"alarm.ack": aid})
+    s.tick()
+    s.tick()
+    acked = [r.payload["alarm.ack"] for r in s.log.records
+             if r.kind == "action" and "alarm.ack" in r.payload]
+    print(f"\n  active {active[:2]} -> acked {acked}")
+    assert acked == active[:2], "both acks must survive, in order"
+    assert all(r.accepted for r in s.log.records if r.kind == "action")
+    states = dict(s.sim.last_obs.alarms)
+    assert all(states[a] == "acknowledged" for a in active[:2])
+
+
+def test_export_mid_run_twice_is_self_consistent(tmp_path):
+    """EXPORT SESSION is available while running; each file must describe itself."""
+    s = SimSession(sessions_dir=tmp_path)
+    s.load("builtin:load_step")
+    s.run()
+    drive(s, 100)
+    first = SessionLog_read(s.export(stamp="a"))
+    drive(s, 200)
+    second = SessionLog_read(s.export(stamp="b"))
+    assert first.end_tick == 100 and second.end_tick == 200
+    assert first.end_state == second.end_state == ""   # neither run had ended
+    assert first.state_history_hash != second.state_history_hash
+    print(f"\n  export@100 {first.state_history_hash[:12]} "
+          f"export@200 {second.state_history_hash[:12]}")
+
+
+def SessionLog_read(path):
+    from hotwell_panel.sessionlog import SessionLog
+    return SessionLog.read(path)

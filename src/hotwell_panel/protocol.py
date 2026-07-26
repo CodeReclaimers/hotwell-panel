@@ -103,6 +103,10 @@ class ChartData:
     request_id: str
     t: list[float]
     series: dict[str, list[float | None]]
+    #: Requested signals the historian does not carry. Reported rather than
+    #: dropped silently, so a bad pen assignment shows up as an error and not
+    #: as a blank chart.
+    unknown: list[str] = field(default_factory=list)
 
 
 def encode(msg: Any) -> dict[str, Any]:

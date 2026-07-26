@@ -172,14 +172,19 @@ def _chart(session: SimSession, body: dict[str, Any]) -> ChartData:
     """Historian passthrough (§4). NaNs become JSON null."""
     sim = session.sim
     if sim is None or sim.historian is None:
-        return ChartData(request_id=body["request_id"], t=[], series={})
+        return ChartData(request_id=body["request_id"], t=[], series={},
+                         unknown=list(body["signals"]))
     known = [s for s in body["signals"] if s in sim.historian.signals]
+    unknown = [s for s in body["signals"] if s not in sim.historian.signals]
     t, series = sim.historian.query(known, body["t0"], body["t1"],
                                     body["max_points"])
+
     def clean(arr):
         return [None if v != v else float(v) for v in arr]
+
     return ChartData(request_id=body["request_id"], t=[float(x) for x in t],
-                     series={k: clean(v) for k, v in series.items()})
+                     series={k: clean(v) for k, v in series.items()},
+                     unknown=unknown)
 
 
 async def _instructor(session: SimSession, bus: Broadcaster, command: str,

@@ -84,6 +84,7 @@ class SimSession:
         self._queue: list[tuple[str, Any, str]] = []   # (kind, payload, source)
         self._synth: EventSynthesizer | None = None
         self._missed_deadlines = 0
+        self._end_reason = ""   # why the scenario ended; "" while still runnable
 
     # ------------------------------------------------------------- lifecycle
 
@@ -100,6 +101,7 @@ class SimSession:
         self.scenario_ref = ref
         self.state = LOADED
         self._queue.clear()
+        self._end_reason = ""
         self._synth = EventSynthesizer(self.table)
         self._synth.prime(sim)
         self.log = SessionLog(
@@ -172,30 +174,47 @@ class SimSession:
         self.log.end_tick = tick_of(sim.t)
         if obs.plant_dead:
             self.state = ENDED
-            self.log.end_state = "plant_dead"
+            self._end_reason = "plant_dead"
         elif sim.scenario is not None and sim.t >= sim.scenario.max_t - 0.5 * DT:
             self.state = ENDED
-            self.log.end_state = "max_t"
+            self._end_reason = "max_t"
         return events, results
 
     def _drain(self) -> tuple[list[ScenarioEvent], dict[str, Any], dict[str, str]]:
-        """Empty the queue into (injected events, merged action dict, sources).
+        """Empty the queue into (injected events, action dict, sources).
 
-        Later submissions of the same action key win, matching a real switch:
-        the last thing the operator did is what the plant sees this tick.
+        `Simulator.step()` accepts one flat action dict per step, so two
+        submissions of the same key with *different* values cannot both be
+        applied this tick. Rather than collapsing them — which would silently
+        drop one — the conflicting submission and everything queued behind it
+        are deferred to the next tick, in order.
+
+        This is not hypothetical: ACK-ALL sends one `alarm.ack` per flashing
+        window, and last-wins would acknowledge exactly one of them. Deferral
+        also keeps each ack on its own tick in the session log, so replay
+        reproduces them individually.
         """
         injected: list[ScenarioEvent] = []
         actions: dict[str, Any] = {}
         sources: dict[str, str] = {}
+        deferred: list[tuple[str, Any, str]] = []
         t = self.sim.t if self.sim else 0.0
         for kind, payload, source in self._queue:
-            if kind == ACTION:
-                for key, value in payload.items():
+            if kind != ACTION:
+                injected.append(ScenarioEvent(t=t, type=kind, params=payload))
+                continue
+            hold: dict[str, Any] = {}
+            for key, value in payload.items():
+                # Once anything is held back, later actions wait too, so the
+                # operator's ordering is never rearranged.
+                if deferred or hold or (key in actions and actions[key] != value):
+                    hold[key] = value
+                else:
                     actions[key] = value
                     sources[key] = source
-            else:
-                injected.append(ScenarioEvent(t=t, type=kind, params=payload))
-        self._queue.clear()
+            if hold:
+                deferred.append((ACTION, hold, source))
+        self._queue = deferred
         return injected, actions, sources
 
     def _insert_events(self, evs: list[ScenarioEvent]) -> None:
@@ -295,12 +314,17 @@ class SimSession:
     # -------------------------------------------------------------- export
 
     def finalize_log(self) -> SessionLog:
+        """Stamp the log with the state as of *now*.
+
+        Safe to call repeatedly mid-run — the instructor's EXPORT SESSION does
+        exactly that — so every field is recomputed rather than filled in once.
+        A stale `end_state` beside a moved `end_tick` would misdescribe the file.
+        """
         assert self.log is not None and self.sim is not None
         self.log.end_tick = tick_of(self.sim.t)
         self.log.plant_dead = bool(self.sim.disc.plant_dead)
         self.log.state_history_hash = self.sim.state_history_hash
-        if not self.log.end_state:
-            self.log.end_state = self.state
+        self.log.end_state = self._end_reason
         return self.log
 
     def export(self, stamp: str | None = None) -> Path:
