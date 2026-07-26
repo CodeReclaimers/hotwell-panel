@@ -177,3 +177,19 @@ def test_load_validated_raises_with_every_problem(tmp_path):
     assert "no instrument 'nope'" in msg
     assert "off the 8 px grid" in msg
     assert "neither placed nor listed" in msg
+
+
+def test_a_broken_manifest_fails_server_startup(tmp_path):
+    """§12.3's real claim: the gate is wired, not merely available.
+
+    `create_app` -> `PanelAssets.build` -> `load_validated`, so a contract
+    mismatch must stop the server rather than producing a subtly wrong board.
+    """
+    from hotwell_panel.server import create_app
+    from hotwell_panel.session import SimSession
+
+    def mutate(raw):
+        _by_id(raw, "gauge_drum_level")["instrument"] = "gone_from_the_core"
+    bad = _write(tmp_path, mutate)
+    with pytest.raises(M.ManifestError, match="gone_from_the_core"):
+        create_app(SimSession(sessions_dir=tmp_path), manifest_path=bad)

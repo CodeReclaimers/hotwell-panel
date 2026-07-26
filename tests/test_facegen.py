@@ -101,7 +101,24 @@ def test_needle_angle_spans_the_sweep_and_clamps():
     print(f"\n  drum_level sweep: {lo:.1f} .. {mid:.1f} .. {hi:.1f} deg")
 
 
-def test_faces_are_pure_functions_of_the_contracts():
-    """Two renders must be byte-identical — no timestamps, no ordering slop."""
-    assert facegen.render_face("feed_flow", TABLE) == \
-        facegen.render_face("feed_flow", TABLE)
+def test_faces_are_deterministic_across_processes():
+    """Byte-identical from a fresh interpreter — no dict-ordering or hash slop.
+
+    Rendering twice in one process cannot fail (the display table is rebuilt
+    from literals each call), so this shells out with a different PYTHONHASHSEED
+    to make the check able to detect a real ordering dependency.
+    """
+    import os
+    import subprocess
+    import sys
+
+    here = facegen.render_face("drum_pressure", TABLE)
+    env = {**os.environ, "PYTHONHASHSEED": "12345"}
+    out = subprocess.run(
+        [sys.executable, "-c",
+         "from hotwell.protection.tables import load_protection_table as L;"
+         "from hotwell_panel import facegen;"
+         "print(facegen.render_face('drum_pressure', L()), end='')"],
+        capture_output=True, text=True, env=env, check=True)
+    print(f"\n  {len(here)} chars, subprocess {len(out.stdout)} chars")
+    assert out.stdout == here

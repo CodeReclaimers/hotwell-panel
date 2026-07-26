@@ -538,3 +538,21 @@ html, body {
 #instructor button.primary { background: #1f6f45; border-color: #2b8a58; }
 #instructor button.danger  { background: #7a2b26; border-color: #9a3830; }
 #instructor button.active  { background: #7a5a1f; border-color: #a3792b; }
+
+/* Pen assignment dropdown, sitting in a <foreignObject> on the chart margin. */
+.pen-select {
+  width: 116px;
+  background: #efe9d6;
+  color: #4a4438;
+  border: 1px solid #b6ab92;
+  border-radius: 2px;
+  font: 8px "Arial Narrow", Arial, sans-serif;
+  text-transform: none;
+  letter-spacing: 0;
+  padding: 0 2px;
+  cursor: pointer;
+}
+.pen-select:hover { background: #e2dbc4; }
+
+/* Keyboard focus must be visible — a grip is operable without a mouse (§6.2). */
+.grip-hit:focus { outline: 2px solid var(--lamp-amber); outline-offset: -2px; }

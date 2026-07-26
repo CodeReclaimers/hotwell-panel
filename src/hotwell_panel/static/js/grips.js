@@ -3,7 +3,9 @@
  *
  * Three-position, spring-return-to-centre: START / NORM / STOP. Hold the grip
  * over to one side and release; the action fires **on release**, as a real
- * spring-return switch does, and the grip snaps back to NORM.
+ * spring-return switch does, and the grip snaps back to NORM. Mouse
+ * (click-and-hold left/right of the pivot) or keyboard (focus, hold Left or
+ * Right arrow) — §6.2 asks for both.
  *
  * Lamps above each grip read from `indications`, which phase 1 guarantees
  * honest: red = running, green = stopped, amber = tripped. That is the power
@@ -85,6 +87,24 @@ export function createGrip(e, conn) {
   hit.addEventListener('mouseup', release);
   hit.addEventListener('mouseleave', () => { if (rec.pos !== NORM) release(); });
   g.appendChild(hit);
+
+  // §6.2 also asks for keyboard: focus a grip and hold Left (STOP) or Right
+  // (START). Same spring-return semantics — the action fires on key release.
+  hit.setAttribute('tabindex', '0');
+  hit.setAttribute('role', 'button');
+  hit.setAttribute('aria-label', `${e.label} pump control switch`);
+  hit.addEventListener('keydown', (ev) => {
+    if (ev.repeat) return;
+    if (ev.key === 'ArrowLeft') { move(STOP); ev.preventDefault(); }
+    else if (ev.key === 'ArrowRight') { move(START); ev.preventDefault(); }
+  });
+  hit.addEventListener('keyup', (ev) => {
+    if (ev.key === 'ArrowLeft' || ev.key === 'ArrowRight') {
+      release();
+      ev.preventDefault();
+    }
+  });
+  hit.addEventListener('blur', () => { if (rec.pos !== NORM) release(); });
   return g;
 }
 

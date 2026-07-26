@@ -277,3 +277,34 @@ def test_first_out_plate_shows_a_label_with_no_annunciator_window(board):
     # No window carries that id — which is the whole point of the plate.
     assert page.evaluate(
         """document.querySelector('[data-alarm="CP1_TRIP:overload"]')""") is None
+
+
+def test_grips_are_operable_from_the_keyboard(board):
+    """§6.2: 'click-and-hold left/right **or** keyboard'."""
+    page, session = board
+    hit = '[data-element="grip_cp2"] .grip-hit'
+    page.focus(hit)
+    page.keyboard.down("ArrowRight")            # throw to START
+    thrown = page.get_attribute('[data-element="grip_cp2"] .grip-handle',
+                                "transform")
+    page.keyboard.up("ArrowRight")              # spring return fires the action
+    centred = page.get_attribute('[data-element="grip_cp2"] .grip-handle',
+                                 "transform")
+    page.wait_for_function(
+        "() => window.panel.store.frame.indications.cp2_running === true",
+        timeout=10000)
+    print(f"\n  handle {thrown} -> {centred}; CP-2 running")
+    assert "rotate(38" in thrown, "Right arrow must throw the grip to START"
+    assert "rotate(0" in centred, "and it must spring back to NORM on release"
+    assert session.sim.disc.pump_modes["cp2"] == "running"
+
+
+def test_keyboard_grip_stop_uses_the_left_arrow(board):
+    page, session = board
+    page.focus('[data-element="grip_cp1"] .grip-hit')
+    page.keyboard.down("ArrowLeft")
+    page.keyboard.up("ArrowLeft")
+    page.wait_for_function(
+        "() => window.panel.store.frame.indications.cp1_running === false",
+        timeout=10000)
+    assert session.sim.disc.pump_modes["cp1"] == "stopped"

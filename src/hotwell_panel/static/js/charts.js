@@ -69,24 +69,30 @@ export function createRecorder(e, conn) {
     pens: (o.pens || []).slice(0, 3).map((name, i) => ({
       name, cls: PEN_CLASSES[i], t: [], v: [],
       path: el('path', { class: `chart-pen ${PEN_CLASSES[i]}`, d: '' }),
-      label: null, select: null,
+      select: null,
     })),
     requests: new Map(),
   };
 
   for (const pen of rec.pens) g.appendChild(pen.path);
 
-  // Pen legend + assignment dropdowns down the left margin.
+  // Pen legend + assignment dropdown down the left margin (§8.1). A real
+  // <select> in a <foreignObject>, so the whole instrument list is one click
+  // away rather than requiring the operator to cycle through 23 of them.
   rec.pens.forEach((pen, i) => {
-    const ly = plotY + 12 + i * 13;
+    const ly = plotY + 4 + i * 15;
     g.appendChild(el('line', {
-      x1: e.x + 6, y1: ly - 3, x2: e.x + 18, y2: ly - 3,
+      x1: e.x + 6, y1: ly + 7, x2: e.x + 16, y2: ly + 7,
       class: `chart-pen ${pen.cls}`,
     }));
-    pen.label = el('text', { x: e.x + 21, y: ly, class: 'chart-pen-label' },
-                   [pen.name]);
-    pen.label.addEventListener('click', () => cyclePen(rec, i));
-    g.appendChild(pen.label);
+    const fo = el('foreignObject', { x: e.x + 18, y: ly, width: 120,
+                                     height: 14 });
+    const sel = document.createElement('select');
+    sel.className = 'pen-select';
+    sel.addEventListener('change', () => assignPen(rec, i, sel.value));
+    fo.appendChild(sel);
+    pen.select = sel;
+    g.appendChild(fo);
   });
 
   // Span selector along the bottom margin.
@@ -107,14 +113,26 @@ export function createRecorder(e, conn) {
   return g;
 }
 
-/** Cycle a pen through the available instruments (§8.1 margin selector). */
-function cyclePen(rec, index) {
+/** Populate every pen dropdown from the display table (any instrument, §8.1). */
+function fillPenOptions(rec) {
   const names = Object.keys(store.units).sort();
-  if (!names.length) return;
+  for (const pen of rec.pens) {
+    if (!pen.select || pen.select.options.length === names.length) continue;
+    pen.select.innerHTML = '';
+    for (const n of names) {
+      const o = document.createElement('option');
+      o.value = n;
+      o.textContent = n;
+      if (n === pen.name) o.selected = true;
+      pen.select.appendChild(o);
+    }
+  }
+}
+
+/** Reassign one pen and refetch its history. */
+function assignPen(rec, index, name) {
   const pen = rec.pens[index];
-  const next = names[(names.indexOf(pen.name) + 1) % names.length];
-  pen.name = next;
-  pen.label.textContent = next;
+  pen.name = name;
   pen.t = [];
   pen.v = [];
   backfill(rec);
@@ -134,7 +152,10 @@ export function backfill(rec) {
 
 /** Backfill every recorder (called once a first frame has arrived). */
 export function backfillAll() {
-  for (const rec of recorders) backfill(rec);
+  for (const rec of recorders) {
+    fillPenOptions(rec);
+    backfill(rec);
+  }
 }
 
 /** @param {Object} msg a `chart_data` message */

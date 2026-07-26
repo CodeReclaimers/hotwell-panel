@@ -70,10 +70,13 @@ def board(tmp_path):
 def test_recorder_one_is_the_shrink_swell_set(board):
     """§8.1: drum level, feed flow, steam flow on the same paper."""
     page, _ = board
+    page.wait_for_function(
+        """() => document.querySelectorAll(
+             '[data-element="chart_recorder_1"] .pen-select')[0].options.length > 1""",
+        timeout=20000)
     pens = page.evaluate(
         """() => [...document.querySelectorAll(
-             '[data-element="chart_recorder_1"] .chart-pen-label')]
-             .map(n => n.textContent)""")
+             '[data-element="chart_recorder_1"] .pen-select')].map(n => n.value)""")
     print(f"\n  recorder 1 pens: {pens}")
     assert pens == ["drum_level", "feed_flow", "steam_flow"]
 
@@ -245,3 +248,34 @@ def test_fidelity_selector_reloads_with_the_two_state_drum(board):
     assert session.fidelity == {"drum_model": "two_state", "three_element": False}
     assert session.sim.cfg["drum"]["model"] == "two_state"
     assert page.text_content("#fidelity") == "TWO_STATE / 1E"
+
+
+def test_pen_assignment_is_a_dropdown_over_every_instrument(board):
+    """§8.1: 'Pen assignment selectable from any instrument (dropdown)'."""
+    page, _ = board
+    page.wait_for_function(
+        """() => document.querySelectorAll(
+             '[data-element="chart_recorder_1"] .pen-select')[0].options.length > 5""",
+        timeout=20000)
+    info = page.evaluate("""() => {
+        const s = document.querySelectorAll(
+          '[data-element="chart_recorder_1"] .pen-select');
+        return {count: s.length, options: s[0].options.length,
+                selected: [...s].map(x => x.value)};
+    }""")
+    print(f"\n  {info}")
+    assert info["count"] == 3
+    assert info["options"] == len(page.evaluate("Object.keys(window.panel.store.units)"))
+    assert info["selected"] == ["drum_level", "feed_flow", "steam_flow"]
+
+    # Reassigning a pen refetches its history rather than starting blank.
+    page.select_option(
+        '[data-element="chart_recorder_1"] .pen-select >> nth=2', "da_level")
+    page.wait_for_timeout(1500)
+    after = page.evaluate("""() => document.querySelectorAll(
+        '[data-element="chart_recorder_1"] .pen-select')[2].value""")
+    d = page.evaluate("""() => document.querySelector(
+        '[data-element="chart_recorder_1"] .chart-pen-3').getAttribute('d')""")
+    print(f"  pen 3 -> {after}, trace {len(d or '')} chars")
+    assert after == "da_level"
+    assert d and len(d) > 20, "reassigned pen must backfill, not start empty"

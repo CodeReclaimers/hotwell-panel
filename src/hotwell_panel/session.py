@@ -153,6 +153,11 @@ class SimSession:
     def _step_once(self) -> tuple[list[Event], list[ActionResult]]:
         sim = self.sim
         assert sim is not None and self.log is not None and self._synth is not None
+        # `Simulator` accepts scenario=None, but this session type always loads
+        # one; the event splice and the consumed-event slice below both assume
+        # it. Fail here with a clear message rather than an AttributeError deep
+        # in the hot loop if free-play is ever added.
+        assert sim.scenario is not None, "SimSession requires a loaded scenario"
         tick = tick_of(sim.t)          # events/actions stamp to the PRE-step tick
         injected, actions, sources = self._drain()
         if injected:

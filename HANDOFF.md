@@ -18,7 +18,7 @@ Built against **`hotwell` 0.2.0** (the §11 precursor, `../hotwell` commit
 | P3 — diagnose it | complete | recorders with historian backfill, instructor station |
 | P4 — polish | **not started** (explicit go-ahead only, §13) | — |
 
-Suite: **90 passed**, ruff clean. 12 of those need Chromium and skip cleanly
+Suite: **95 passed**, ruff clean. 16 of those need Chromium and skip cleanly
 without it.
 
 ## How to run
@@ -195,9 +195,6 @@ Recorded rather than resolved unilaterally (§14 ask-vs-decide).
   steady-state diagnostic (core `audit.py`) — but the readout does not say so.
 - The 30-minute chart span mixes the historian's 20 Hz and 1 Hz tiers, so the
   left end of a 30 min trace is visibly coarser. Honest, but unlabelled.
-- Pen reassignment cycles through all instruments on click rather than offering
-  a dropdown; §8.1 says dropdown. Functional but not what was specified.
-- No keyboard control of the grips (§6.2 mentions "or keyboard"); mouse only.
 
 ## Proposals for a future `hotwell` release
 
