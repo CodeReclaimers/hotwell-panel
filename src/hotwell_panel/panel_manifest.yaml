@@ -1,0 +1,301 @@
+# Panel placement manifest (PLAN-panel.md §6.1).
+#
+# Validated at server start and by pytest against the INSTALLED hotwell's
+# ObservationSpec, ACTION_SCHEMA and protection table — so this file is also the
+# cross-repo compatibility gate (§12.3). Validation covers: every instrument
+# reference exists, every action reference exists, the annunciator grid has room
+# for every window plus spares, nothing falls off the canvas, nothing overlaps,
+# everything sits on the 8 px grid, and every instrument is placed or explicitly
+# unplaced with a reason.
+#
+# Coordinates are top-left in a 1600x900 design space. Gauges give `size`
+# (diameter); everything else gives `w`/`h`. Layout runs left to right along the
+# flow path, grouped by system (§10), with the mimic one-line drawn in the band
+# above each group's gauges (board.svg).
+
+version: 1
+canvas: {width: 1600, height: 900}
+
+regions:
+  annunciator: {x: 0,   y: 0,   w: 1600, h: 144}
+  mimic:       {x: 0,   y: 144, w: 928,  h: 756}
+  right:       {x: 936, y: 144, w: 664,  h: 756}
+  soe:         {x: 944, y: 600, w: 648,  h: 192}
+  advisor:     {x: 944, y: 800, w: 648,  h: 92}
+
+# Engraved group title plates, mirroring the mimic's left-to-right flow (§10).
+groups:
+  - {id: g_condensate, title: "CONDENSATE",        x: 8,   y: 152, w: 208, h: 384}
+  - {id: g_feed,       title: "FEEDWATER / DA",    x: 224, y: 152, w: 288, h: 384}
+  - {id: g_boiler,     title: "BOILER",            x: 520, y: 152, w: 176, h: 384}
+  - {id: g_turbine,    title: "TURBINE-ELECTRIC",  x: 704, y: 152, w: 216, h: 384}
+  - {id: g_stations,   title: "CONTROL STATIONS",  x: 8,   y: 544, w: 912, h: 224}
+  - {id: g_trips,      title: "MANUAL TRIP",       x: 8,   y: 776, w: 912, h: 112}
+
+# The annunciator array. Windows fill from the protection table in table order;
+# the rest are engraved blanks (§7). 6 x 5 = 30 cells for 19 conditions = 58%
+# spare, comfortably over the ~30% the plan asks for.
+annunciator:
+  x: 8
+  y: 8
+  cols: 6
+  rows: 5
+  cell_w: 260
+  cell_h: 26
+
+elements:
+  # ------------------------------------------------------------- condensate
+  - {id: gauge_hotwell_level,   kind: gauge, instrument: hotwell_level,
+     x: 16,  y: 248, size: 88}
+  - {id: gauge_condensate_flow, kind: gauge, instrument: condensate_flow,
+     x: 112, y: 248, size: 88}
+  - {id: gauge_cp1_current,     kind: gauge, instrument: cp1_current,
+     x: 24,  y: 360, size: 64}
+  - {id: gauge_cp2_current,     kind: gauge, instrument: cp2_current,
+     x: 128, y: 360, size: 64}
+  - id: grip_cp1
+    kind: grip
+    x: 16
+    y: 456
+    w: 88
+    h: 80
+    label: "CP-1"
+    options:
+      pump: cp1
+      start_action: cp1.start
+      stop_action: cp1.stop
+      running_indication: cp1_running
+      tripped_indication: cp1_tripped
+  - id: grip_cp2
+    kind: grip
+    x: 112
+    y: 456
+    w: 88
+    h: 80
+    label: "CP-2"
+    options:
+      pump: cp2
+      start_action: cp2.start
+      stop_action: cp2.stop
+      running_indication: cp2_running
+      tripped_indication: cp2_tripped
+
+  # -------------------------------------------------------------- feedwater
+  - {id: gauge_da_level,     kind: gauge, instrument: da_level,
+     x: 232, y: 248, size: 80}
+  - {id: gauge_da_pressure,  kind: gauge, instrument: da_pressure,
+     x: 320, y: 248, size: 80}
+  - {id: gauge_feed_flow,    kind: gauge, instrument: feed_flow,
+     x: 408, y: 248, size: 80}
+  - {id: gauge_fp1_current,  kind: gauge, instrument: fp1_current,
+     x: 232, y: 360, size: 64}
+  - {id: gauge_fp2_current,  kind: gauge, instrument: fp2_current,
+     x: 304, y: 360, size: 64}
+  - {id: gauge_fp1_npsh,     kind: gauge, instrument: fp1_npsh_margin,
+     x: 376, y: 360, size: 64}
+  - {id: gauge_fp2_npsh,     kind: gauge, instrument: fp2_npsh_margin,
+     x: 448, y: 360, size: 64}
+  - id: grip_fp1
+    kind: grip
+    x: 232
+    y: 456
+    w: 88
+    h: 80
+    label: "FP-1"
+    options:
+      pump: fp1
+      start_action: fp1.start
+      stop_action: fp1.stop
+      running_indication: fp1_running
+      tripped_indication: fp1_tripped
+  - id: grip_fp2
+    kind: grip
+    x: 328
+    y: 456
+    w: 88
+    h: 80
+    label: "FP-2"
+    options:
+      pump: fp2
+      start_action: fp2.start
+      stop_action: fp2.stop
+      running_indication: fp2_running
+      tripped_indication: fp2_tripped
+
+  # ----------------------------------------------------------------- boiler
+  - {id: gauge_drum_level,    kind: gauge, instrument: drum_level,
+     x: 528, y: 248, size: 112}
+  - {id: gauge_drum_pressure, kind: gauge, instrument: drum_pressure,
+     x: 528, y: 384, size: 112}
+  - id: lamp_safety_valve
+    kind: lamp
+    x: 648
+    y: 256
+    w: 40
+    h: 40
+    label: "SV OPEN"
+    options: {indication: safety_valve_open, color: red}
+  - id: lamp_mft
+    kind: lamp
+    x: 648
+    y: 320
+    w: 40
+    h: 40
+    label: "MFT"
+    options: {indication: mft, color: red}
+  - id: lamp_turbine_trip
+    kind: lamp
+    x: 648
+    y: 384
+    w: 40
+    h: 40
+    label: "TURB TRIP"
+    options: {indication: turbine_trip, color: red}
+
+  # ------------------------------------------------------- turbine-electric
+  - {id: gauge_chest_pressure, kind: gauge, instrument: chest_pressure,
+     x: 712, y: 248, size: 88}
+  - {id: gauge_steam_flow,     kind: gauge, instrument: steam_flow,
+     x: 808, y: 248, size: 88}
+  - {id: gauge_shaft_rpm,      kind: gauge, instrument: shaft_rpm,
+     x: 712, y: 360, size: 88, label: "TACHOMETER"}
+  - {id: gauge_cond_pressure,  kind: gauge, instrument: cond_pressure,
+     x: 808, y: 360, size: 88}
+  - id: breaker_generator
+    kind: breaker
+    x: 712
+    y: 472
+    w: 88
+    h: 64
+    label: "GEN OUTPUT"
+    options:
+      indication: breaker_closed
+      controllable: false
+  - id: breaker_nonvital
+    kind: breaker
+    x: 808
+    y: 472
+    w: 88
+    h: 64
+    label: "NON-VITAL"
+    options:
+      indication: nonvital_connected
+      controllable: true
+      action: loads.nonvital.connect
+
+  # ------------------------------------------ controller stations (§6.3)
+  - id: station_drum_level
+    kind: station
+    instrument: drum_level
+    x: 16
+    y: 576
+    w: 208
+    h: 176
+    label: "DRUM LEVEL"
+    options:
+      loop: drum_level
+      output_instrument: fw_valve_pos
+      mode_action: loop.drum_level.mode
+      manual_action: fw_valve.manual_cmd
+      slew: 0.02
+      # §6.3: the 1E/3E element mode shows as a legend lamp — D18 made visible.
+      element_mode_lamp: true
+  - id: station_drum_pressure
+    kind: station
+    instrument: drum_pressure
+    x: 232
+    y: 576
+    w: 208
+    h: 176
+    label: "DRUM PRESS"
+    options:
+      loop: drum_pressure
+      output_instrument: firing_rate
+      mode_action: loop.drum_pressure.mode
+      manual_action: firing.manual_cmd
+      slew: 0.02
+  - id: station_da_level
+    kind: station
+    instrument: da_level
+    x: 448
+    y: 576
+    w: 208
+    h: 176
+    label: "DA LEVEL"
+    options:
+      loop: da_level
+      output_instrument: da_lcv_pos
+      mode_action: loop.da_level.mode
+      manual_action: da_lcv.manual_cmd
+      slew: 0.02
+  - id: station_governor
+    kind: station
+    x: 664
+    y: 576
+    w: 248
+    h: 176
+    label: "GOVERNOR   5% DROOP"
+    options:
+      loop: governor
+      output_instrument: throttle_pos
+      extra_instruments: [mw_out, frequency]
+      raise_action: governor.load_ref_mw
+      lower_action: governor.load_ref_mw
+      step_mw: 0.25
+
+  # -------------------------------------- covered manual trips (hotwell 0.2.0)
+  - id: button_manual_mft
+    kind: button
+    x: 16
+    y: 808
+    w: 176
+    h: 64
+    label: "MANUAL MFT"
+    options: {action: trips.manual_mft, covered: true}
+  - id: button_manual_turbine
+    kind: button
+    x: 208
+    y: 808
+    w: 200
+    h: 64
+    label: "MANUAL TURB TRIP"
+    options: {action: trips.manual_turbine, covered: true}
+  - id: button_trips_reset
+    kind: button
+    x: 424
+    y: 808
+    w: 152
+    h: 64
+    label: "TRIP RESET"
+    options: {action: trips.reset, covered: false}
+
+  # ------------------------------------------------ right pane recorders (§8.1)
+  - id: chart_recorder_1
+    kind: chart
+    x: 944
+    y: 152
+    w: 648
+    h: 216
+    label: "RECORDER 1"
+    options:
+      # The shrink/swell showcase (§8.1).
+      pens: [drum_level, feed_flow, steam_flow]
+      span_min: 10
+  - id: chart_recorder_2
+    kind: chart
+    x: 944
+    y: 376
+    w: 648
+    h: 216
+    label: "RECORDER 2"
+    options:
+      pens: [frequency, mw_out, drum_pressure]
+      span_min: 10
+
+# §6.1 coverage rule: every instrument in ObservationSpec appears above or is
+# listed here with a reason. All 22 are placed, so this is empty. The six
+# signals with no board gauge of their own — fw_valve_pos, firing_rate,
+# da_lcv_pos, throttle_pos, mw_out, frequency — are placed as M/A-station output
+# and adjacent meters per §6.3, which counts as placement. The validator rejects
+# listing an instrument in both places.
+unplaced: {}

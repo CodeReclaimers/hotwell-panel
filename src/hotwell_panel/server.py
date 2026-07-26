@@ -10,6 +10,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import time
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -17,12 +18,34 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
+from hotwell_panel import facegen
 from hotwell_panel import hello as hello_builder
+from hotwell_panel import manifest as manifest_mod
 from hotwell_panel.protocol import ChartData, ProtocolError, encode, parse_client
 from hotwell_panel.session import ENDED, RUNNING, SimSession
 
 WALL_HZ = 20.0
 STATIC = Path(__file__).parent / "static"
+
+
+@dataclass
+class PanelAssets:
+    """Everything generated once at server start (§5.2, §6.1).
+
+    The manifest is validated against the *installed* hotwell's contracts here,
+    so a core release that moves a contract fails at startup with every problem
+    listed rather than producing a subtly wrong board.
+    """
+
+    manifest: dict[str, Any]
+    gauge_faces: dict[str, str]
+
+    @classmethod
+    def build(cls, session: SimSession,
+              manifest_path: Path | None = None) -> PanelAssets:
+        m = manifest_mod.load_validated(manifest_path, session.table)
+        return cls(manifest=m.to_dict(),
+                   gauge_faces=facegen.render_all(session.table))
 
 
 class Broadcaster:
@@ -105,9 +128,11 @@ class RealTimeLoop:
 
 
 def create_app(session: SimSession | None = None, *, wall_hz: float = WALL_HZ,
-               autostart: bool = True, scenario: str | None = None) -> FastAPI:
+               autostart: bool = True, scenario: str | None = None,
+               manifest_path: Path | None = None) -> FastAPI:
     """Build the app. `autostart=False` leaves the loop stopped for tests."""
     session = session or SimSession(local_scenarios=Path("scenarios"))
+    assets = PanelAssets.build(session, manifest_path)
     bus = Broadcaster()
     loop = RealTimeLoop(session, bus, wall_hz=wall_hz)
 
@@ -124,6 +149,7 @@ def create_app(session: SimSession | None = None, *, wall_hz: float = WALL_HZ,
     app.state.session = session
     app.state.bus = bus
     app.state.loop = loop
+    app.state.assets = assets
 
     @app.get("/")
     async def index() -> FileResponse:
@@ -138,12 +164,13 @@ def create_app(session: SimSession | None = None, *, wall_hz: float = WALL_HZ,
         bus.add(ws)
         try:
             await ws.send_json(encode(hello_builder.build(
-                session, session.local_scenarios)))
+                session, session.local_scenarios, assets.gauge_faces,
+                assets.manifest)))
             frame = session.frame()
             if frame is not None:
                 await ws.send_json(encode(frame))
             while True:
-                await _handle(ws, await ws.receive_json(), session, bus)
+                await _handle(ws, await ws.receive_json(), session, bus, assets)
         except WebSocketDisconnect:
             pass
         finally:
@@ -153,7 +180,7 @@ def create_app(session: SimSession | None = None, *, wall_hz: float = WALL_HZ,
 
 
 async def _handle(ws: WebSocket, raw: Any, session: SimSession,
-                  bus: Broadcaster) -> None:
+                  bus: Broadcaster, assets: PanelAssets) -> None:
     """Dispatch one client message. Protocol errors are reported, never fatal."""
     try:
         mtype, body = parse_client(raw)
@@ -165,7 +192,7 @@ async def _handle(ws: WebSocket, raw: Any, session: SimSession,
     elif mtype == "chart_query":
         await ws.send_json(encode(_chart(session, body)))
     elif mtype == "instructor":
-        await _instructor(session, bus, body["command"], body["params"])
+        await _instructor(session, bus, assets, body["command"], body["params"])
 
 
 def _chart(session: SimSession, body: dict[str, Any]) -> ChartData:
@@ -187,14 +214,16 @@ def _chart(session: SimSession, body: dict[str, Any]) -> ChartData:
                      unknown=unknown)
 
 
-async def _instructor(session: SimSession, bus: Broadcaster, command: str,
+async def _instructor(session: SimSession, bus: Broadcaster,
+                      assets: PanelAssets, command: str,
                       params: dict[str, Any]) -> None:
     """Instructor station commands (§9). State-changing ones push a frame
     immediately so a paused panel still updates (§3.2)."""
     if command == "load_scenario":
         session.load(params["ref"], params.get("fidelity"))
         await bus.send([encode(hello_builder.build(
-            session, session.local_scenarios))])
+            session, session.local_scenarios, assets.gauge_faces,
+            assets.manifest))])
     elif command == "run":
         session.run()
     elif command == "pause":
@@ -204,7 +233,8 @@ async def _instructor(session: SimSession, bus: Broadcaster, command: str,
     elif command == "reset":
         session.reset()
         await bus.send([encode(hello_builder.build(
-            session, session.local_scenarios))])
+            session, session.local_scenarios, assets.gauge_faces,
+            assets.manifest))])
     elif command == "inject_event":
         session.inject_event(params["event"], params.get("params", {}))
     elif command == "export_session":

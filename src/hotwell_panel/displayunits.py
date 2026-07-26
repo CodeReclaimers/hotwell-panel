@@ -91,7 +91,7 @@ def display_table(cp_rated_a: float = 60.0, fp_rated_a: float = 400.0
         "da_pressure": _affine("PSIG", *_PSIG, 0, 30, 1, "DA PRESS"),
         # Condenser gauge reads VACUUM: higher is better, so the scale is
         # negative and the face runs 0..30 inHg with normal near the top.
-        "cond_pressure": _affine("IN HG VAC", *_INHG_VAC, 0, 30, 1, "COND VAC"),
+        "cond_pressure": _affine("INHG VAC", *_INHG_VAC, 0, 30, 1, "COND VAC"),
         # --- levels --------------------------------------------------------
         "drum_level": _affine("INCHES", *_IN, -15, 15, 1, "DRUM LEVEL"),
         "hotwell_level": _affine("INCHES", *_IN, -40, 60, 0, "HOTWELL LVL"),
@@ -111,13 +111,13 @@ def display_table(cp_rated_a: float = 60.0, fp_rated_a: float = 400.0
         "firing_rate": _affine("PERCENT", *_PCT, 0, 100, 0, "FIRING RATE"),
         "da_lcv_pos": _affine("PERCENT", *_PCT, 0, 100, 0, "DA LCV"),
         # --- pump motor currents, percent of rated -------------------------
-        "cp1_current": _affine("PCT RATED", 100.0 / cp_rated_a, 0.0, 0, 125, 0,
+        "cp1_current": _affine("% RATED", 100.0 / cp_rated_a, 0.0, 0, 125, 0,
                                "CP-1 AMPS"),
-        "cp2_current": _affine("PCT RATED", 100.0 / cp_rated_a, 0.0, 0, 125, 0,
+        "cp2_current": _affine("% RATED", 100.0 / cp_rated_a, 0.0, 0, 125, 0,
                                "CP-2 AMPS"),
-        "fp1_current": _affine("PCT RATED", 100.0 / fp_rated_a, 0.0, 0, 125, 0,
+        "fp1_current": _affine("% RATED", 100.0 / fp_rated_a, 0.0, 0, 125, 0,
                                "FP-1 AMPS"),
-        "fp2_current": _affine("PCT RATED", 100.0 / fp_rated_a, 0.0, 0, 125, 0,
+        "fp2_current": _affine("% RATED", 100.0 / fp_rated_a, 0.0, 0, 125, 0,
                                "FP-2 AMPS"),
         # --- pump suction margin -------------------------------------------
         # §5.1's table has no row for NPSH margin; feet is the period-correct

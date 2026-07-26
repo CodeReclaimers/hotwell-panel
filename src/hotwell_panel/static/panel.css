@@ -1,0 +1,273 @@
+/* Aesthetic spec, PLAN-panel.md §10. Flat, matte, functional: two-tone
+   gray-green benchboard, ivory gauge faces, engraved lamacoid plates. No
+   glossy skeuomorphism, no drop shadows beyond a hint of bezel relief. */
+
+:root {
+  --field:        #6b7f77;   /* benchboard field */
+  --frame:        #4d5c55;   /* darker frame / separators */
+  --frame-light:  #7f948b;
+  --plate:        #14181a;   /* engraved lamacoid plate */
+  --plate-text:   #eceae2;
+  --dial:         #f2edd8;   /* ivory gauge face */
+  --ink:          #1a1a1a;
+  --lamp-red:     #e33f2c;   /* running / energised (power plant convention) */
+  --lamp-green:   #35c46a;   /* stopped / deenergised */
+  --lamp-amber:   #f0a93b;   /* tripped / abnormal */
+  --lamp-dark:    #2a2f2c;
+  --window-dark:  #d8d9cf;   /* annunciator window, unlit */
+  --window-alarm: #f2b134;
+  --window-trip:  #e34b3a;
+  --phosphor:     #59f08a;   /* the only "terminal" styling on the page */
+  --phosphor-bg:  #0a0f0b;
+  --grid:         8px;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  background: #232a27;
+  color: var(--plate-text);
+  font-family: "Oswald", "Arial Narrow", Arial, sans-serif;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  overflow: hidden;
+}
+
+#board-wrap {
+  width: 100%;
+  height: calc(100% - 24px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#board { width: 100%; height: 100%; }
+
+.board-field { fill: var(--field); }
+
+/* ------------------------------------------------------- engraved plates */
+
+.group-box {
+  fill: none;
+  stroke: var(--frame);
+  stroke-width: 2;
+}
+
+.group-plate { fill: var(--plate); }
+
+.group-title,
+.plate-text {
+  fill: var(--plate-text);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-anchor: middle;
+  dominant-baseline: middle;
+  font-family: "Oswald", "Arial Narrow", Arial, sans-serif;
+}
+
+.device-plate { fill: var(--plate); }
+.device-plate-text {
+  fill: var(--plate-text);
+  font-size: 8.5px;
+  letter-spacing: 0.08em;
+  text-anchor: middle;
+  dominant-baseline: middle;
+}
+
+/* ------------------------------------------------------------- gauges */
+
+.gauge-bezel {
+  fill: #101413;
+  stroke: #050807;
+  stroke-width: 1;
+}
+
+.gauge-face circle:first-child { fill: var(--dial); }
+.gauge-numeral, .gauge-units { font-family: "Arial Narrow", Arial, sans-serif; }
+
+/* Matte black needle with a red tail (§10). The transform is set from JS;
+   no CSS transition — smoothing is done numerically so the needle never
+   lags the data in a way the operator cannot reason about. */
+.needle {
+  fill: #101010;
+  stroke: none;
+}
+.needle-tail { fill: var(--lamp-red); }
+.needle-hub { fill: #101010; }
+
+/* Dark on the ivory dial — it was briefly ivory-on-ivory and invisible. */
+.gauge-digital {
+  fill: var(--ink);
+  font-size: 10px;
+  font-weight: 600;
+  text-anchor: middle;
+  font-family: "Arial Narrow", Arial, sans-serif;
+  letter-spacing: 0;
+}
+
+/* --------------------------------------------------------- mimic one-line */
+
+#layer-mimic .vessel {
+  fill: #55655e;
+  stroke: #cfd8d3;
+  stroke-width: 1.5;
+}
+#layer-mimic .drum { fill: #5d6f67; }
+#layer-mimic .vessel-label {
+  fill: #eef2f0;
+  font-size: 9px;
+  text-anchor: middle;
+  letter-spacing: 0.08em;
+}
+#layer-mimic .vessel-label.small { font-size: 7.5px; }
+#layer-mimic .tag {
+  fill: #dfe7e3;
+  font-size: 7px;
+  text-anchor: middle;
+  letter-spacing: 0.06em;
+}
+#layer-mimic .return-tag { font-size: 6.5px; fill: #b9c6c0; }
+
+#layer-mimic .pipe,
+#layer-mimic .shaft {
+  fill: none;
+  stroke: #cfd8d3;
+  stroke-width: 2;
+}
+
+/* Flow lines get marching dashes only when flow is nonzero. Understated on
+   purpose (§6.2): a reading aid, not a toy. */
+#layer-mimic .flow-line {
+  fill: none;
+  stroke: #cfd8d3;
+  stroke-width: 2.5;
+}
+#layer-mimic .flow-line.flowing {
+  stroke-dasharray: 6 6;
+  animation: march 1.6s linear infinite;
+  opacity: 0.9;
+}
+#layer-mimic .flow-line.reverse.flowing { animation-direction: reverse; }
+@keyframes march { to { stroke-dashoffset: -12; } }
+
+#layer-mimic .pump {
+  fill: var(--lamp-dark);
+  stroke: #cfd8d3;
+  stroke-width: 1.5;
+}
+#layer-mimic .pump.running { fill: var(--lamp-red); }
+#layer-mimic .pump.tripped { fill: var(--lamp-amber); }
+
+#layer-mimic .valve path { fill: #55655e; stroke: #cfd8d3; stroke-width: 1.5; }
+#layer-mimic .machine {
+  fill: #55655e;
+  stroke: #cfd8d3;
+  stroke-width: 1.5;
+}
+#layer-mimic .sv-stack { fill: var(--lamp-dark); stroke: #cfd8d3; stroke-width: 1; }
+#layer-mimic .sv-stack.on { fill: var(--lamp-red); }
+#layer-mimic .breaker-sym rect {
+  fill: var(--lamp-green);
+  stroke: #cfd8d3;
+  stroke-width: 1.5;
+}
+#layer-mimic .breaker-sym.closed rect { fill: var(--lamp-red); }
+
+/* ------------------------------------------------------------- lamps */
+
+.lamp-lens {
+  fill: var(--lamp-dark);
+  stroke: #0c0f0e;
+  stroke-width: 1.5;
+}
+.lamp-lens.red   { fill: var(--lamp-red); }
+.lamp-lens.green { fill: var(--lamp-green); }
+.lamp-lens.amber { fill: var(--lamp-amber); }
+
+/* ------------------------------------------------- annunciator windows */
+
+.ann-window {
+  fill: var(--window-dark);
+  stroke: #0c0f0e;
+  stroke-width: 1.5;
+  opacity: 0.35;                 /* dark window: translucent white (§10) */
+}
+.ann-window.lit        { opacity: 1; fill: var(--window-alarm); }
+.ann-window.lit.trip   { fill: var(--window-trip); }
+.ann-window.test       { opacity: 1; }
+.ann-window.spare      { opacity: 0.2; }
+
+.ann-legend {
+  fill: #14181a;
+  font-size: 7.5px;
+  text-anchor: middle;
+  letter-spacing: 0.04em;
+  pointer-events: none;
+  opacity: 0.45;
+}
+.ann-window-group.lit .ann-legend { opacity: 1; font-weight: 600; }
+
+/* Fast flash = new alarm; slow flash = cleared but not reset (ringback).
+   Driven by class, animated on the wall clock so it keeps running when the
+   sim is paused (§3.2). */
+.ann-window-group.flash-fast .ann-window { animation: annfast 0.32s steps(1) infinite; }
+.ann-window-group.flash-slow .ann-window { animation: annslow 1.4s steps(1) infinite; }
+@keyframes annfast { 50% { opacity: 0.25; } }
+@keyframes annslow { 50% { opacity: 0.3; } }
+
+/* First-out: inverted colours plus a corner tag, where a 1970s panel put it. */
+.ann-window-group.first-out .ann-window { fill: #14181a; opacity: 1; }
+.ann-window-group.first-out .ann-legend { fill: var(--window-alarm); opacity: 1; }
+.ann-fo-tag {
+  fill: var(--window-alarm);
+  font-size: 5.5px;
+  text-anchor: end;
+  letter-spacing: 0;
+}
+
+/* --------------------------------------------------- CRT / printer areas */
+
+.crt-bezel {
+  fill: var(--phosphor-bg);
+  stroke: #0b0e0c;
+  stroke-width: 3;
+}
+.crt-text {
+  fill: var(--phosphor);
+  font-family: "DejaVu Sans Mono", "Courier New", monospace;
+  font-size: 9px;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.crt-text.trip { fill: #ff7a6a; }
+.crt-text.dim  { fill: #2f7a4c; }
+
+/* ------------------------------------------------------------ recorders */
+
+.chart-paper { fill: #f4f1e4; stroke: #0c0f0e; stroke-width: 2; }
+.chart-grid  { stroke: #d7bfae; stroke-width: 0.5; fill: none; }
+.chart-grid.major { stroke: #c49a80; stroke-width: 0.8; }
+.chart-pen   { fill: none; stroke-width: 1.4; }
+.chart-pen-1 { stroke: #2a2f8f; }   /* period recorder pen colours */
+.chart-pen-2 { stroke: #a8232b; }
+.chart-pen-3 { stroke: #1f7a45; }
+
+/* --------------------------------------------------------- status bar */
+
+#status-bar {
+  height: 24px;
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 0 12px;
+  background: var(--plate);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  border-top: 1px solid #000;
+}
+#conn.connected    { color: var(--lamp-green); }
+#conn.disconnected { color: var(--lamp-amber); }
+#conn.failed       { color: var(--lamp-red); }
+#sim-clock { font-family: "DejaVu Sans Mono", monospace; letter-spacing: 0; }

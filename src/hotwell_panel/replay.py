@@ -12,8 +12,8 @@ from typing import Any
 from hotwell.scenario import load_scenario
 from hotwell.simulator import Simulator
 
-from hotwell_panel.session import build_config, tick_of
 from hotwell_panel.sessionlog import SessionLog, write_scenario
+from hotwell_panel.simconfig import build_config, tick_of
 
 
 def replay_scenario(scenario_path: Any, fidelity: dict[str, Any],

@@ -15,7 +15,8 @@ from hotwell.sensors import OBSERVATION_SPEC
 
 from hotwell_panel import scenarios as scenario_catalog
 from hotwell_panel.protocol import PROTOCOL_VERSION, Hello
-from hotwell_panel.session import OBS_SPEC_DIGEST, SimSession
+from hotwell_panel.session import SimSession
+from hotwell_panel.simconfig import OBS_SPEC_DIGEST
 
 
 def annunciator_windows(session: SimSession) -> list[dict[str, Any]]:
