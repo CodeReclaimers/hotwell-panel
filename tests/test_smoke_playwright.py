@@ -83,7 +83,7 @@ def test_page_loads_and_receives_hello(page):
     assert info["gauges"] == 17
     assert info["windows"] == 19          # one per protection-table condition
     assert info["faces"] == 23
-    assert info["elements"] == 35
+    assert info["elements"] == 39   # 35 board devices + 4 annunciator controls
     assert page.errors == [], page.errors
 
 

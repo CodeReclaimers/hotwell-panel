@@ -271,3 +271,129 @@ html, body {
 #conn.disconnected { color: var(--lamp-amber); }
 #conn.failed       { color: var(--lamp-red); }
 #sim-clock { font-family: "DejaVu Sans Mono", monospace; letter-spacing: 0; }
+
+/* --------------------------------------------------- pistol grips (§6.2) */
+
+.grip-boss  { fill: #2b322f; stroke: #0c0f0e; stroke-width: 1.5; }
+.grip-lever { fill: #1b201e; stroke: #0c0f0e; stroke-width: 1; }
+.grip-handle { transition: transform 90ms ease-out; }   /* spring return */
+.grip-hit   { fill: transparent; cursor: grab; }
+.grip-hit:active { cursor: grabbing; }
+.grip-legend {
+  fill: var(--plate-text);
+  font-size: 6.5px;
+  letter-spacing: 0.06em;
+  opacity: 0.75;
+}
+.grip-legend.end { text-anchor: end; }
+
+/* ------------------------------------------------------------ breakers */
+
+.breaker-lens {
+  fill: var(--lamp-dark);
+  stroke: #0c0f0e;
+  stroke-width: 1.5;
+}
+.breaker-lens.closed { fill: var(--lamp-red); }     /* energised */
+.breaker-lens.open   { fill: var(--lamp-green); }   /* deenergised */
+.breaker-state {
+  fill: var(--plate-text);
+  font-size: 8px;
+  text-anchor: middle;
+  letter-spacing: 0.08em;
+}
+
+/* --------------------------------------------------- pushbuttons */
+
+.push-face {
+  fill: #3c4844;
+  stroke: #11201b;
+  stroke-width: 1.2;
+  cursor: pointer;
+}
+.push-face.lit      { fill: var(--lamp-amber); }
+.push-face.guarded  { fill: #5a3c34; stroke: #2a1a16; }
+.push-face.armed    { fill: var(--lamp-red); }
+.push-button.pressed .push-face { fill: #26302c; }
+.push-text {
+  fill: var(--plate-text);
+  font-size: 8px;
+  text-anchor: middle;
+  letter-spacing: 0.08em;
+  pointer-events: none;
+}
+.push-face.lit + .push-text,
+.push-face.armed + .push-text { fill: #14181a; }
+.button-body {
+  fill: none;
+  stroke: var(--frame);
+  stroke-width: 2;
+}
+
+/* ------------------------------------------- M/A controller stations */
+
+.station-box { fill: #63776f; stroke: var(--frame); stroke-width: 2; }
+.station-pv {
+  fill: var(--dial);
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  font-family: "DejaVu Sans Mono", monospace;
+}
+.station-sp, .station-meter {
+  fill: #d7e0db;
+  font-size: 9px;
+  letter-spacing: 0.06em;
+  font-family: "DejaVu Sans Mono", monospace;
+}
+.station-meter { font-size: 13px; fill: var(--dial); }
+.station-legend {
+  fill: var(--lamp-green);
+  font-size: 7.5px;
+  letter-spacing: 0.08em;
+}
+.station-legend.degraded { fill: var(--lamp-amber); }
+.station-legend.droop { text-anchor: end; fill: var(--plate-text); opacity: 0.8; }
+
+.meter-track { fill: #1b211f; stroke: #0c0f0e; stroke-width: 1; }
+.meter-fill  { fill: var(--lamp-green); }
+.meter-label {
+  fill: var(--plate-text);
+  font-size: 7px;
+  text-anchor: middle;
+  letter-spacing: 0.04em;
+}
+
+/* ---------------------------------------------- sequence of events (§8.2) */
+
+.soe-filter-face {
+  fill: #17201b;
+  stroke: #2f7a4c;
+  stroke-width: 1;
+  cursor: pointer;
+}
+.soe-filter.active .soe-filter-face { fill: #2f7a4c; }
+.soe-filter-text {
+  fill: var(--phosphor);
+  font-size: 7px;
+  text-anchor: middle;
+  letter-spacing: 0.06em;
+  pointer-events: none;
+}
+
+/* FIRST OUT plate: the initiating event is often not a windowed alarm, so it
+   gets its own dedicated display (§7). */
+.fo-plate { fill: var(--plate); stroke: #0a0d0b; stroke-width: 1.5; }
+.first-out-plate.active .fo-plate { stroke: var(--window-alarm); stroke-width: 2; }
+.fo-label {
+  fill: var(--plate-text);
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  opacity: 0.7;
+}
+.fo-value {
+  fill: #6d7a73;
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  font-family: "DejaVu Sans Mono", monospace;
+}
+.first-out-plate.active .fo-value { fill: var(--window-alarm); font-weight: 600; }

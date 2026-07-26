@@ -58,6 +58,11 @@ class Frame:
     alarms: dict[str, str]               # id -> active | acknowledged
     status: dict[str, Any]
     audit: dict[str, float]              # mass/energy closure (instructor readout)
+    #: Controller-station state: mode, setpoint, output and manual command per
+    #: loop, plus the governor's load reference. `Observation.indications` does
+    #: not carry loop modes, so an M/A station would otherwise have to infer its
+    #: own AUTO/MAN lamp from action echoes — and would be wrong after a reset.
+    loops: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass

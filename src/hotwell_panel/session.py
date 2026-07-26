@@ -262,6 +262,33 @@ class SimSession:
             "missed_deadlines": self._missed_deadlines,
         }
 
+    def loop_state(self) -> dict[str, Any]:
+        """Controller-station state, read straight off the live controllers.
+
+        Not available through the observation contract (`indications` has no
+        loop modes), so the panel layer reads `Simulator.control` — the same
+        objects the actions mutate, so an AUTO/MAN lamp cannot disagree with
+        the plant.
+        """
+        sim = self.sim
+        if sim is None:
+            return {}
+        ctl = sim.control
+        out: dict[str, Any] = {}
+        for name in ("drum_level", "drum_pressure", "da_level"):
+            pi = ctl.loop(name)
+            out[name] = {"mode": pi.mode, "sp": pi.sp, "output": pi.output,
+                         "manual_cmd": pi.manual_cmd,
+                         "lo": pi.p.lo, "hi": pi.p.hi}
+        out["governor"] = {
+            "mode": "manual" if ctl.governor_manual is not None else "auto",
+            "load_ref_mw": ctl.load_ref / 1e6,
+            "droop": ctl.gov.droop,
+            "output": sim.commands.throttle_cmd,
+        }
+        out["three_element"] = bool(ctl.three_element)
+        return out
+
     def frame(self) -> Frame | None:
         sim = self.sim
         if sim is None or sim.last_obs is None:
@@ -274,6 +301,7 @@ class SimSession:
             indications=dict(obs.indications),
             alarms=dict(obs.alarms),
             status=self.status(),
+            loops=self.loop_state(),
             audit={"mass_drift_frac": rep.mass_drift_frac,
                    "mass_drift_frac_per_hour": rep.mass_drift_frac_per_hour,
                    "energy_residual_frac": rep.energy_residual_frac,

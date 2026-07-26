@@ -38,12 +38,49 @@ groups:
 annunciator:
   x: 8
   y: 8
-  cols: 6
-  rows: 5
+  cols: 5
+  rows: 6
   cell_w: 260
-  cell_h: 26
+  cell_h: 22
 
 elements:
+  # ------------------------------- annunciator controls (§7), right of the grid
+  # SILENCE, RESET and LAMP TEST are panel-local: they act on the window state
+  # machine, not on the plant, so they carry no core action. ACK does — it
+  # sends one `alarm.ack` per flashing window.
+  - id: button_ann_silence
+    kind: button
+    x: 1320
+    y: 16
+    w: 128
+    h: 44
+    label: "SILENCE"
+    options: {local: silence}
+  - id: button_ann_ack
+    kind: button
+    x: 1456
+    y: 16
+    w: 128
+    h: 44
+    label: "ACKNOWLEDGE"
+    options: {local: ack, action: alarm.ack}
+  - id: button_ann_reset
+    kind: button
+    x: 1320
+    y: 72
+    w: 128
+    h: 44
+    label: "RESET"
+    options: {local: reset}
+  - id: button_ann_lamptest
+    kind: button
+    x: 1456
+    y: 72
+    w: 128
+    h: 44
+    label: "LAMP TEST"
+    options: {local: lamp_test}
+
   # ------------------------------------------------------------- condensate
   - {id: gauge_hotwell_level,   kind: gauge, instrument: hotwell_level,
      x: 16,  y: 248, size: 88}

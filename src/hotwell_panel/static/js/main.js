@@ -2,14 +2,16 @@
  * @file Entry point: wire the socket to the board and run the animation loop.
  *
  * Two clocks, deliberately separate. Sim state arrives on `frame` messages at
- * the simulator's pace; needle smoothing and (later) annunciator flashers run
- * on requestAnimationFrame against the wall clock, so they keep animating while
- * the sim is paused (§3.2).
+ * the simulator's pace; needle smoothing and the annunciator flashers run on
+ * requestAnimationFrame and CSS against the wall clock, so they keep animating
+ * while the sim is paused (§3.2).
  */
 
 import * as annunciator from './annunciator.js';
+import * as audio from './audio.js';
 import * as board from './board.js';
 import * as gauges from './gauges.js';
+import * as soe from './soe.js';
 import { store } from './store.js';
 import { Connection } from './ws.js';
 
@@ -33,15 +35,38 @@ function formatClock(t) {
   return `T + ${String(m).padStart(3, '0')}:${s.toFixed(1).padStart(4, '0')}`;
 }
 
+/**
+ * The annunciator control buttons (§7). SILENCE stops the horn but leaves the
+ * windows flashing; ACK sends one `alarm.ack` per flashing window and takes
+ * them steady; RESET drops ringing-back windows dark; LAMP TEST is held.
+ */
+const annHandlers = {
+  silence: () => { audio.silence(); audio.click(); },
+  ack: () => {
+    const ids = annunciator.flashing();
+    // Only currently-ACTIVE ids: the core rejects an ack for anything else,
+    // and the SOE log would fill with spurious rejections.
+    for (const id of ids) conn.action({ 'alarm.ack': id });
+    audio.silence();
+    audio.click();
+  },
+  reset: () => { annunciator.reset(); audio.click(); },
+  lamp_test: () => {},
+  lamp_test_on: () => annunciator.setLampTest(true),
+  lamp_test_off: () => annunciator.setLampTest(false),
+};
+
 function onHello(msg) {
   const first = store.hello === null;
   store.setHello(msg);
   gauges.reset();
   seeded = false;
-  board.renderElements(msg.manifest || {});
-  board.renderRightPane(msg.manifest || {});
-  annunciator.render(msg.manifest || {}, msg.annunciator || []);
   if (first) gauges.installFaces(msg.gauge_faces || {});
+  board.renderElements(msg.manifest || {}, conn, annHandlers);
+  board.renderRightPane(msg.manifest || {});
+  soe.render(msg.manifest || {});
+  soe.reset();
+  annunciator.render(msg.manifest || {}, msg.annunciator || []);
   ui.scenario.textContent = msg.scenario ? msg.scenario.name : 'NO SCENARIO';
   const f = msg.fidelity || {};
   ui.fidelity.textContent =
@@ -63,12 +88,18 @@ function onFrame(msg) {
 }
 
 function onEvent(msg) {
-  if (msg.kind === 'alarm') annunciator.onAlarm(msg.id, msg.state);
+  soe.push(msg);
+  if (msg.kind === 'alarm') {
+    annunciator.onAlarm(msg.id, msg.state);
+    // A new alarm sounds the horn (§7). SILENCE stops it; the window keeps
+    // flashing until acknowledged.
+    if (msg.state === 'active') audio.start();
+  }
   // A first-out label is often NOT a protection-table id (CP1_TRIP:overload,
-  // MANUAL_MFT), so setFirstOut can legitimately find no window. The dedicated
-  // first-out display and the SOE log arrive in P2.
+  // MANUAL_MFT), so it may light no window — the FIRST OUT plate in the SOE
+  // pane is the display that always shows it.
   if (msg.kind === 'first_out' && msg.first_out) annunciator.setFirstOut(msg.id);
-  console.log(`[${msg.t.toFixed(2)}] ${msg.text || msg.kind}`);
+  if (msg.is_trip) audio.start();
 }
 
 function onActionResult(msg) {
@@ -104,10 +135,13 @@ function tick(now) {
   requestAnimationFrame(tick);
 }
 
+// Browsers require a user gesture before audio; arm it on the first click.
+window.addEventListener('pointerdown', () => audio.unlock(), { once: true });
+
 board.loadMimic().then(() => {
   conn.connect();
   requestAnimationFrame(tick);
 });
 
 // Exposed for the Playwright smoke test and for poking at a live board.
-window.panel = { store, conn, gauges, board, annunciator };
+window.panel = { store, conn, gauges, board, annunciator, soe, audio };

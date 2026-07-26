@@ -9,6 +9,10 @@
  */
 
 import { createGauge } from './gauges.js';
+import { createBreaker, createGrip } from './grips.js';
+import * as grips from './grips.js';
+import * as stations from './stations.js';
+import { createStation } from './stations.js';
 import { store } from './store.js';
 import { clear, el, plate } from './svgutil.js';
 
@@ -74,7 +78,65 @@ function createLamp(e) {
   return g;
 }
 
-/** Placeholder footprint so P1's board is complete and correctly sized. */
+/**
+ * A pushbutton. Covered guards (the manual trips, §11) need the cover lifted
+ * before the button will act — a real board does not let you brush an MFT
+ * pushbutton by accident.
+ */
+function createButton(e, conn, handlers) {
+  const o = e.options || {};
+  const g = el('g', { class: `push-button board-button${o.covered ? ' covered' : ''}`,
+                      'data-element': e.id });
+  g.appendChild(el('rect', {
+    x: e.x, y: e.y, width: e.w, height: e.h, rx: 3, class: 'button-body',
+  }));
+  g.appendChild(plate(e.x + 4, e.y + 4, e.w - 8, 14, e.label || e.id));
+  const face = el('rect', {
+    x: e.x + 10, y: e.y + 24, width: e.w - 20, height: e.h - 34, rx: 3,
+    class: `push-face${o.covered ? ' guarded' : ''}`,
+  });
+  g.appendChild(face);
+  const caption = el('text', {
+    x: e.x + e.w / 2, y: e.y + e.h - 14, class: 'push-text',
+  }, [o.covered ? 'LIFT COVER' : 'PRESS']);
+  g.appendChild(caption);
+
+  let uncovered = !o.covered;
+  face.addEventListener('click', () => {
+    if (o.covered && !uncovered) {
+      uncovered = true;
+      face.setAttribute('class', 'push-face armed');
+      caption.textContent = 'PRESS';
+      // Re-latch the guard shortly after, so it is armed for one press only.
+      setTimeout(() => {
+        if (!uncovered) return;
+        uncovered = false;
+        face.setAttribute('class', 'push-face guarded');
+        caption.textContent = 'LIFT COVER';
+      }, 4000);
+      return;
+    }
+    if (o.local && handlers[o.local]) {
+      handlers[o.local]();
+    } else if (o.action) {
+      conn.action({ [o.action]: true });
+    }
+    if (o.covered) {
+      uncovered = false;
+      face.setAttribute('class', 'push-face guarded');
+      caption.textContent = 'LIFT COVER';
+    }
+  });
+  // LAMP TEST is held, not clicked (§7).
+  if (o.local === 'lamp_test') {
+    face.addEventListener('mousedown', () => handlers.lamp_test_on?.());
+    face.addEventListener('mouseup', () => handlers.lamp_test_off?.());
+    face.addEventListener('mouseleave', () => handlers.lamp_test_off?.());
+  }
+  return g;
+}
+
+/** Placeholder footprint for kinds whose module lands in a later milestone. */
 function placeholder(e, caption) {
   const g = el('g', { class: `placeholder kind-${e.kind}`,
                       'data-element': e.id });
@@ -92,10 +154,12 @@ function placeholder(e, caption) {
  * Build every placed element.
  * @param {Object} manifest
  */
-export function renderElements(manifest) {
+export function renderElements(manifest, conn, handlers = {}) {
   const layer = document.getElementById('layer-elements');
   clear(layer);
   lamps.length = 0;
+  grips.reset();
+  stations.reset();
   renderGroups(manifest);
   for (const e of manifest.elements || []) {
     switch (e.kind) {
@@ -105,9 +169,20 @@ export function renderElements(manifest) {
       case 'lamp':
         layer.appendChild(createLamp(e));
         break;
+      case 'grip':
+        layer.appendChild(createGrip(e, conn));
+        break;
+      case 'breaker':
+        layer.appendChild(createBreaker(e, conn));
+        break;
+      case 'station':
+        layer.appendChild(createStation(e, conn));
+        break;
+      case 'button':
+        layer.appendChild(createButton(e, conn, handlers));
+        break;
       default:
-        // grip | station | breaker | button | chart — own modules, later
-        // milestones. Registered here so the layout is validated end to end.
+        // chart — P3. Registered so the layout is validated end to end.
         layer.appendChild(placeholder(e, e.kind.toUpperCase()));
     }
   }
@@ -135,6 +210,8 @@ export function renderRightPane(manifest) {
 /** Apply the latest frame to every indication-driven widget. */
 export function updateIndications() {
   if (!store.frame) return;
+  grips.update();
+  stations.update();
   for (const l of lamps) {
     const on = store.indication(l.key);
     l.node.setAttribute('class', `lamp-lens${on ? ' ' + l.on : ''}`);

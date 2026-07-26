@@ -84,9 +84,15 @@ def _write(tmp_path, mutate):
     return p
 
 
+def _by_id(raw, eid):
+    """Target elements by id: index-based fixtures broke the moment the
+    annunciator control buttons were prepended to the list."""
+    return next(e for e in raw["elements"] if e["id"] == eid)
+
+
 def test_unknown_instrument_is_caught(tmp_path):
     def mutate(raw):
-        raw["elements"][0]["instrument"] = "not_an_instrument"
+        _by_id(raw, "gauge_hotwell_level")["instrument"] = "not_an_instrument"
     problems = M.validate(M.load(_write(tmp_path, mutate)), TABLE)
     assert any("not_an_instrument" in p for p in problems), problems
 
@@ -137,14 +143,14 @@ def test_overlap_is_caught(tmp_path):
 
 def test_off_canvas_is_caught(tmp_path):
     def mutate(raw):
-        raw["elements"][0]["x"] = 1592
+        _by_id(raw, "gauge_hotwell_level")["x"] = 1592
     problems = M.validate(M.load(_write(tmp_path, mutate)), TABLE)
     assert any("outside canvas" in p for p in problems), problems
 
 
 def test_off_grid_is_caught(tmp_path):
     def mutate(raw):
-        raw["elements"][0]["y"] = 249         # §10: 8 px grid
+        _by_id(raw, "gauge_hotwell_level")["y"] = 249    # §10: 8 px grid
     problems = M.validate(M.load(_write(tmp_path, mutate)), TABLE)
     assert any("off the 8 px grid" in p for p in problems), problems
 
@@ -159,8 +165,8 @@ def test_shrinking_the_annunciator_grid_is_caught(tmp_path):
 def test_load_validated_raises_with_every_problem(tmp_path):
     """Startup reports all faults at once, not just the first."""
     def mutate(raw):
-        raw["elements"][0]["instrument"] = "nope"
-        raw["elements"][1]["y"] = 249
+        _by_id(raw, "gauge_hotwell_level")["instrument"] = "nope"
+        _by_id(raw, "gauge_condensate_flow")["y"] = 249
     with pytest.raises(M.ManifestError) as exc:
         M.load_validated(_write(tmp_path, mutate), TABLE)
     msg = str(exc.value)
