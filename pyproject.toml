@@ -1,0 +1,40 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "hotwell-panel"
+version = "0.1.0"
+description = "1970s-era steam plant control panel for the hotwell simulation core"
+requires-python = ">=3.11"
+dependencies = [
+    "hotwell>=0.2,<0.3",
+    "fastapi",
+    "uvicorn[standard]",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "ruff",
+    # httpx backs fastapi.testclient.TestClient, which PLAN-panel.md §12.1
+    # prescribes for the protocol/WebSocket tests. Test-only.
+    "httpx",
+    "playwright",   # one optional smoke test (§12.5); skipped when absent
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+"hotwell_panel" = ["static/**/*", "*.yaml"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
