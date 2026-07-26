@@ -13,7 +13,6 @@ no event loop at all.
 from __future__ import annotations
 
 from dataclasses import replace
-from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -23,6 +22,7 @@ from hotwell.scenario import ScenarioEvent, load_scenario
 from hotwell.simulator import DT, Simulator
 
 from hotwell_panel import scenarios as scenario_catalog
+from hotwell_panel import sessionlog, telemetry
 from hotwell_panel.events import EventSynthesizer, soe_line
 from hotwell_panel.protocol import ActionResult, Event, Frame
 from hotwell_panel.sessionlog import ACTION, INSTRUCTOR, OPERATOR, SCENARIO, LogRecord, SessionLog
@@ -40,6 +40,7 @@ from hotwell_panel.simconfig import (
 
 __all__ = ["SimSession", "DEFAULT_FIDELITY", "OBS_SPEC_DIGEST", "build_config",
            "tick_of", "NO_SCENARIO", "LOADED", "RUNNING", "PAUSED", "ENDED"]
+
 
 class SimSession:
     """Owns the simulator, the action queue, the session log, and time control."""
@@ -108,8 +109,30 @@ class SimSession:
         self._queue.append((ACTION, dict(command), source))
 
     def inject_event(self, etype: str, params: dict[str, Any]) -> None:
-        """Queue a live casualty insertion (instructor station, §9)."""
-        self._queue.append((etype, dict(params), INSTRUCTOR))
+        """Queue a live casualty insertion (instructor station, §9).
+
+        `set_load` is translated here. The instructor station offers a **MW
+        delta** (§9) but `hotwell`'s `set_load` event takes an **absolute p0 in
+        watts**; doing the conversion at this edge keeps plant units out of the
+        browser and puts them in one tested place, rather than leaving a
+        units mismatch spread across the UI.
+        """
+        params = dict(params)
+        if etype == "set_load":
+            params = self._resolve_set_load(params)
+        self._queue.append((etype, params, INSTRUCTOR))
+
+    def _resolve_set_load(self, params: dict[str, Any]) -> dict[str, Any]:
+        """{target, delta_mw | p0_mw} -> {target, p0} in absolute watts."""
+        target = params.get("target", "nonvital")
+        if "p0" in params:                      # already absolute watts
+            return {"target": target, "p0": float(params["p0"])}
+        block = getattr(self.sim.plant.loads, target)
+        if "p0_mw" in params:
+            p0 = float(params["p0_mw"]) * 1e6
+        else:
+            p0 = block.p0 + float(params.get("delta_mw", 0.0)) * 1e6
+        return {"target": target, "p0": max(0.0, p0)}
 
     # ---------------------------------------------------------------- stepping
 
@@ -262,51 +285,19 @@ class SimSession:
             "missed_deadlines": self._missed_deadlines,
         }
 
-    def loop_state(self) -> dict[str, Any]:
-        """Controller-station state, read straight off the live controllers.
-
-        Not available through the observation contract (`indications` has no
-        loop modes), so the panel layer reads `Simulator.control` — the same
-        objects the actions mutate, so an AUTO/MAN lamp cannot disagree with
-        the plant.
-        """
-        sim = self.sim
-        if sim is None:
-            return {}
-        ctl = sim.control
-        out: dict[str, Any] = {}
-        for name in ("drum_level", "drum_pressure", "da_level"):
-            pi = ctl.loop(name)
-            out[name] = {"mode": pi.mode, "sp": pi.sp, "output": pi.output,
-                         "manual_cmd": pi.manual_cmd,
-                         "lo": pi.p.lo, "hi": pi.p.hi}
-        out["governor"] = {
-            "mode": "manual" if ctl.governor_manual is not None else "auto",
-            "load_ref_mw": ctl.load_ref / 1e6,
-            "droop": ctl.gov.droop,
-            "output": sim.commands.throttle_cmd,
-        }
-        out["three_element"] = bool(ctl.three_element)
-        return out
-
     def frame(self) -> Frame | None:
         sim = self.sim
         if sim is None or sim.last_obs is None:
             return None
         obs = sim.last_obs
-        rep = sim.audit()
         return Frame(
             tick=tick_of(sim.t), t=sim.t,
             values=dict(obs.values),
             indications=dict(obs.indications),
             alarms=dict(obs.alarms),
             status=self.status(),
-            loops=self.loop_state(),
-            audit={"mass_drift_frac": rep.mass_drift_frac,
-                   "mass_drift_frac_per_hour": rep.mass_drift_frac_per_hour,
-                   "energy_residual_frac": rep.energy_residual_frac,
-                   "energy_residual_w": rep.energy_residual,
-                   "relief_kg": rep.mass_relief_integrated},
+            loops=telemetry.loop_state(sim),
+            audit=telemetry.audit_block(sim),
         )
 
     def note_missed_deadline(self) -> None:
@@ -316,21 +307,12 @@ class SimSession:
     # -------------------------------------------------------------- export
 
     def finalize_log(self) -> SessionLog:
-        """Stamp the log with the state as of *now*.
-
-        Safe to call repeatedly mid-run — the instructor's EXPORT SESSION does
-        exactly that — so every field is recomputed rather than filled in once.
-        A stale `end_state` beside a moved `end_tick` would misdescribe the file.
-        """
+        """Stamp the log with the state as of now (safe to call repeatedly)."""
         assert self.log is not None and self.sim is not None
-        self.log.end_tick = tick_of(self.sim.t)
-        self.log.plant_dead = bool(self.sim.disc.plant_dead)
-        self.log.state_history_hash = self.sim.state_history_hash
-        self.log.end_state = self._end_reason
-        return self.log
+        return sessionlog.finalize(self.log, self.sim, self._end_reason,
+                                   tick_of(self.sim.t))
 
     def export(self, stamp: str | None = None) -> Path:
-        """Write `sessions/<timestamp>_<scenario>.session.yaml` (§3.4)."""
+        """Write the session file (§3.4)."""
         log = self.finalize_log()
-        stamp = stamp or datetime.now().strftime("%Y%m%d_%H%M%S")
-        return log.write(self.sessions_dir / f"{stamp}_{log.scenario_name}.session.yaml")
+        return log.write(sessionlog.session_path(log, self.sessions_dir, stamp))

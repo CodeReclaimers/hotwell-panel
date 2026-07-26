@@ -37,7 +37,9 @@ html, body {
 
 #board-wrap {
   width: 100%;
-  height: calc(100% - 24px);
+  /* Leave room for the status bar AND the collapsed instructor drawer, which
+     is position:fixed and would otherwise cover the manual-trip row. */
+  height: calc(100% - 24px - 26px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -397,3 +399,142 @@ html, body {
   font-family: "DejaVu Sans Mono", monospace;
 }
 .first-out-plate.active .fo-value { fill: var(--window-alarm); font-weight: 600; }
+
+/* ------------------------------------------------- chart recorder detail */
+
+.chart-pen-label {
+  fill: #4a4438;
+  font-size: 7.5px;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  font-family: "Arial Narrow", Arial, sans-serif;
+}
+.chart-pen-label:hover { fill: #14181a; text-decoration: underline; }
+.chart-axis-text {
+  fill: #6b6252;
+  font-size: 7px;
+  text-anchor: middle;
+  font-family: "DejaVu Sans Mono", monospace;
+  letter-spacing: 0;
+}
+.chart-scale {
+  font-size: 6.5px;
+  text-anchor: end;
+  letter-spacing: 0;
+  font-family: "Arial Narrow", Arial, sans-serif;
+}
+.chart-scale.chart-pen-1 { fill: #2a2f8f; }
+.chart-scale.chart-pen-2 { fill: #a8232b; }
+.chart-scale.chart-pen-3 { fill: #1f7a45; }
+.span-face {
+  fill: #e6e0cd;
+  stroke: #a89a80;
+  stroke-width: 0.8;
+  cursor: pointer;
+}
+.span-btn:hover .span-face { fill: #d3cbb4; }
+.span-text {
+  fill: #4a4438;
+  font-size: 6.5px;
+  text-anchor: middle;
+  pointer-events: none;
+  letter-spacing: 0;
+}
+
+/* ------------------------------------ instructor station (§9, §10) --------
+   Out-of-fiction on purpose: modern flat, not benchboard. */
+
+#instructor {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 24px;
+  background: #171a1d;
+  border-top: 2px solid #3a4046;
+  font-family: system-ui, "Segoe UI", Roboto, sans-serif;
+  text-transform: none;
+  letter-spacing: normal;
+  color: #d5dade;
+  z-index: 20;
+  max-height: 26px;
+  overflow: hidden;
+  transition: max-height 160ms ease-out;
+}
+#instructor.open { max-height: 60vh; overflow-y: auto; }
+
+.ins-toggle {
+  display: block;
+  width: 100%;
+  background: #22272b;
+  color: #9fb0bd;
+  border: 0;
+  padding: 4px 12px;
+  font: 600 11px/1.4 system-ui, sans-serif;
+  letter-spacing: 0.14em;
+  text-align: left;
+  cursor: pointer;
+}
+.ins-toggle:hover { background: #2b3237; color: #cfe0ec; }
+
+.ins-body {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding: 12px 16px 18px;
+  align-items: flex-start;
+}
+.ins-group {
+  background: #1e2327;
+  border: 1px solid #2f363c;
+  border-radius: 6px;
+  padding: 10px 12px;
+  min-width: 240px;
+}
+.ins-group.wide { min-width: 420px; flex: 1; }
+.ins-group h3 {
+  margin: 0 0 8px;
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  color: #7f939f;
+  font-weight: 600;
+}
+.ins-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+  font-size: 12px;
+}
+.ins-field > span { min-width: 92px; color: #8d9aa3; }
+.ins-row { display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
+.ins-note { font-size: 10.5px; color: #6d7c86; margin-top: 6px; }
+.ins-readout {
+  font: 11px/1.6 "DejaVu Sans Mono", monospace;
+  color: #9ec5a8;
+  word-break: break-all;
+}
+
+#instructor select,
+#instructor input {
+  background: #12161a;
+  color: #d5dade;
+  border: 1px solid #39424a;
+  border-radius: 4px;
+  padding: 3px 6px;
+  font: 12px system-ui, sans-serif;
+}
+#instructor input[type="number"] { width: 74px; }
+#instructor button {
+  background: #2c343a;
+  color: #dbe4ea;
+  border: 1px solid #3d474f;
+  border-radius: 4px;
+  padding: 5px 10px;
+  font: 600 11px system-ui, sans-serif;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+}
+#instructor button:hover { background: #37424a; }
+#instructor button.primary { background: #1f6f45; border-color: #2b8a58; }
+#instructor button.danger  { background: #7a2b26; border-color: #9a3830; }
+#instructor button.active  { background: #7a5a1f; border-color: #a3792b; }

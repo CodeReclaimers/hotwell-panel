@@ -8,6 +8,8 @@
  * P1 onward.
  */
 
+import { createRecorder } from './charts.js';
+import * as charts from './charts.js';
 import { createGauge } from './gauges.js';
 import { createBreaker, createGrip } from './grips.js';
 import * as grips from './grips.js';
@@ -160,6 +162,7 @@ export function renderElements(manifest, conn, handlers = {}) {
   lamps.length = 0;
   grips.reset();
   stations.reset();
+  charts.reset();
   renderGroups(manifest);
   for (const e of manifest.elements || []) {
     switch (e.kind) {
@@ -181,8 +184,10 @@ export function renderElements(manifest, conn, handlers = {}) {
       case 'button':
         layer.appendChild(createButton(e, conn, handlers));
         break;
+      case 'chart':
+        layer.appendChild(createRecorder(e, conn));
+        break;
       default:
-        // chart — P3. Registered so the layout is validated end to end.
         layer.appendChild(placeholder(e, e.kind.toUpperCase()));
     }
   }

@@ -10,7 +10,9 @@
 import * as annunciator from './annunciator.js';
 import * as audio from './audio.js';
 import * as board from './board.js';
+import * as charts from './charts.js';
 import * as gauges from './gauges.js';
+import * as instructor from './instructor.js';
 import * as soe from './soe.js';
 import { store } from './store.js';
 import { Connection } from './ws.js';
@@ -26,6 +28,7 @@ const ui = {
 
 let frameCount = 0;
 let seeded = false;
+let backfilled = false;
 let lastFpsAt = performance.now();
 
 /** T + MMM:SS.s, the way a plant clock reads. */
@@ -67,6 +70,8 @@ function onHello(msg) {
   soe.render(msg.manifest || {});
   soe.reset();
   annunciator.render(msg.manifest || {}, msg.annunciator || []);
+  instructor.render(conn);
+  backfilled = false;
   ui.scenario.textContent = msg.scenario ? msg.scenario.name : 'NO SCENARIO';
   const f = msg.fidelity || {};
   ui.fidelity.textContent =
@@ -84,7 +89,12 @@ function onFrame(msg) {
   ui.state.textContent =
     `${(st.state || '').toUpperCase()}${st.speed > 1 ? ` ${st.speed}X` : ''}`;
   board.updateIndications();
+  charts.onFrame();
+  instructor.onFrame();
   if (!seeded) { annunciator.seedFromFrame(); seeded = true; }
+  // Backfill needs a frame first: the historian query window is anchored on
+  // the current sim time.
+  if (!backfilled) { charts.backfillAll(); backfilled = true; }
 }
 
 function onEvent(msg) {
@@ -111,8 +121,8 @@ const conn = new Connection({
   frame: onFrame,
   event: onEvent,
   action_result: onActionResult,
-  chart_data: () => {},
-  session_exported: (m) => console.info('session exported:', m.path),
+  chart_data: (m) => charts.onChartData(m),
+  session_exported: (m) => { instructor.onExported(m); },
   error: (m) => console.error('protocol error:', m.reason),
   info: () => {},
   status: (s) => {
@@ -144,4 +154,5 @@ board.loadMimic().then(() => {
 });
 
 // Exposed for the Playwright smoke test and for poking at a live board.
-window.panel = { store, conn, gauges, board, annunciator, soe, audio };
+window.panel = { store, conn, gauges, board, annunciator, soe, audio,
+                 charts, instructor };

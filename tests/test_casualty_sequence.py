@@ -162,3 +162,53 @@ def test_recovered_casualty_has_no_trips_under_either_fidelity():
         assert trips == ["CP1_TRIP:overload"], trips
         assert s.sim.disc.plant_dead is False
         assert s.sim.disc.pump_modes["cp2"] == "running"
+
+
+# ------------------------------ §12.6(d): shrink/swell on recorder 1 ---------
+
+
+def test_recorder_one_data_contains_the_shrink_swell():
+    """The data behind the visual check in §12.6(d).
+
+    Judging the trace by eye stays a manual gate, but whether the phenomenon is
+    *in the data recorder 1 plots* is testable: this queries the historian for
+    exactly the three signals that recorder is assigned, over the load step.
+
+    Classic inverse response — a step increase in steam demand flashes steam in
+    the drum and level RISES before feedwater catches up and it settles low.
+    """
+    import numpy as np
+
+    s = SimSession()
+    s.load("builtin:load_step", PANEL_DEFAULT)
+    s.run()
+    while s.state == RUNNING and s.sim.t < 420.0:
+        s.tick()
+
+    pens = ["drum_level", "feed_flow", "steam_flow"]      # recorder 1 (§8.1)
+    t, series = s.sim.historian.query(pens, 280.0, 420.0, 5000)
+    assert set(series) == set(pens)
+
+    i_pre = int(np.argmin(np.abs(t - 299.0)))
+    level_pre = series["drum_level"][i_pre]
+    steam_pre = series["steam_flow"][i_pre]
+
+    window = (t >= 300.0) & (t <= 340.0)
+    i_peak = int(np.argmax(series["drum_level"][window]))
+    swell = series["drum_level"][window][i_peak] - level_pre
+    t_peak = t[window][i_peak] - 300.0
+    steam_peak = series["steam_flow"][window][i_peak]
+
+    i_end = int(np.argmin(np.abs(t - 420.0)))
+    level_end = series["drum_level"][i_end]
+
+    print(f"\n  pre-step  level {level_pre * 1000:+6.1f} mm, "
+          f"steam {steam_pre:.2f} kg/s")
+    print(f"  swell     {swell * 1000:+6.2f} mm at +{t_peak:.1f} s, "
+          f"steam {steam_peak:.2f} kg/s")
+    print(f"  settling  level {level_end * 1000:+6.1f} mm")
+
+    assert steam_peak > steam_pre, "the step must raise steam demand"
+    assert swell > 0.010, f"expected a visible swell, got {swell * 1000:.1f} mm"
+    assert t_peak < 30.0, "the swell must lead, not lag, the flow change"
+    assert level_end < level_pre, "and the level must then fall away"

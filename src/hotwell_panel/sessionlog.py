@@ -16,6 +16,7 @@ order reproduces the live application order exactly, including within a tick.
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass, field
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -165,3 +166,24 @@ def write_scenario(log: SessionLog, path: str | Path) -> Path:
     )
     path.write_text(header + yaml.safe_dump(to_scenario_dict(log), sort_keys=False))
     return path
+
+
+def finalize(log: SessionLog, sim, end_reason: str, tick: int) -> SessionLog:
+    """Stamp a log with the state as of *now*.
+
+    Safe to call repeatedly mid-run — the instructor's EXPORT SESSION does
+    exactly that — so every field is recomputed rather than filled in once. A
+    stale `end_state` beside a moved `end_tick` would misdescribe the file.
+    """
+    log.end_tick = tick
+    log.plant_dead = bool(sim.disc.plant_dead)
+    log.state_history_hash = sim.state_history_hash
+    log.end_state = end_reason
+    return log
+
+
+def session_path(log: SessionLog, sessions_dir: Path,
+                 stamp: str | None = None) -> Path:
+    """`sessions/<timestamp>_<scenario>.session.yaml` (§3.4)."""
+    stamp = stamp or datetime.now().strftime("%Y%m%d_%H%M%S")
+    return Path(sessions_dir) / f"{stamp}_{log.scenario_name}.session.yaml"
