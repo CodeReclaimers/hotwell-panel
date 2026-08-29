@@ -21,8 +21,13 @@ playwright_api = pytest.importorskip(
 
 import uvicorn  # noqa: E402
 
-from hotwell_panel.server import create_app  # noqa: E402
+from hotwell_panel.server import DIST, create_app  # noqa: E402
 from hotwell_panel.session import SimSession  # noqa: E402
+
+# §12.6: the smoke test runs against the BUILT client served by server.py.
+if not (DIST / "index.html").is_file():
+    pytest.skip("client/dist not built (cd client && npm run build)",
+                allow_module_level=True)
 
 
 def _free_port() -> int:
@@ -75,14 +80,19 @@ def test_page_loads_and_receives_hello(page):
         protocol: window.panel.store.hello.protocol_version,
         gauges: window.panel.gauges.count(),
         windows: window.panel.annunciator.count(),
-        faces: document.querySelectorAll('#face-defs > g').length,
+        faces_in_hello: Object.keys(window.panel.store.hello.gauge_faces).length,
+        faces_in_dom: document.querySelectorAll(
+            '#layer-elements .gauge [id^="face-"]').length,
         elements: document.querySelectorAll('#layer-elements > g').length,
     })""")
     print(f"\n  {info}")
     assert info["protocol"] == 1
     assert info["gauges"] == 17
     assert info["windows"] == 19          # one per protection-table condition
-    assert info["faces"] == 23
+    # §5.2 (Svelte migration): every generated face arrives in hello; the DOM
+    # carries one {@html}-injected face per PLACED gauge, not a shared defs.
+    assert info["faces_in_hello"] == 23
+    assert info["faces_in_dom"] == 17
     assert info["elements"] == 39   # 35 board devices + 4 annunciator controls
     assert page.errors == [], page.errors
 

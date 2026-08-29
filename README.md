@@ -5,8 +5,9 @@ plant simulation core: annunciator array, mimic diagram with analog gauges and
 pistol-grip switches, manual/auto controller stations, chart recorders, a
 sequence-of-events log, and an instructor station.
 
-Single user, localhost, one Python process. Vanilla JavaScript ES modules and
-SVG in the browser — no build step, no node toolchain, no framework.
+Single user, localhost. The client is **Svelte 5 + TypeScript + Vite** (plain
+SPA, runes mode, no SvelteKit); production serving is one Python process with
+the built client mounted by FastAPI.
 
 `hotwell` is consumed strictly as an installed dependency; this repository never
 edits it.
@@ -17,16 +18,39 @@ edits it.
 uv venv .venv
 uv pip install -e ../hotwell          # the core, as a dependency
 uv pip install -e '.[dev]'
+cd client && npm install && cd ..     # node dev deps, version-pinned
 ```
 
+Development runs two processes — uvicorn for the sim/WebSocket and `vite dev`
+for the client with HMR (it proxies `/ws` to :8000):
+
 ```bash
-.venv/bin/python -m pytest            # all tests
-.venv/bin/python -m ruff check .      # lint
-.venv/bin/python -m hotwell_panel --list-scenarios
+make dev                              # or run the two halves yourself:
+#   .venv/bin/python -m uvicorn --factory hotwell_panel.server:create_app --port 8000
+#   cd client && npm run dev          # then open http://127.0.0.1:5173
+```
+
+Production is a single process serving the built client:
+
+```bash
+cd client && npm run build && cd ..   # emits client/dist/
 .venv/bin/python -m hotwell_panel --scenario builtin:cp1_trip_unrecovered
 ```
 
-Then open <http://127.0.0.1:8000>.
+Then open <http://127.0.0.1:8000>. `python -m hotwell_panel` refuses to start
+if `client/dist/` is missing.
+
+## Test gate
+
+```bash
+make check                            # the whole gate, or piecewise:
+.venv/bin/python -m pytest            # server + browser tests (browser tests
+                                      #   need chromium AND a built client/dist)
+.venv/bin/python -m ruff check .      # python lint
+cd client && npm run check            # svelte-check (TS + template, runes)
+cd client && npm test                 # vitest (annunciator machine, smoothing,
+                                      #   protocol-version guard)
+```
 
 ## Replay
 
@@ -66,6 +90,13 @@ src/hotwell_panel/
   manifest.py               manifest loading + validation
   hello.py                  the static-state message
   scenarios.py              builtin + local scenario discovery
-  static/                   index.html, panel.css, js/, board.svg
+client/                     Svelte 5 + TS + Vite SPA
+  src/main.ts               composition root: socket -> stores, window.panel
+  src/App.svelte            board shell; {#each} over the placement manifest
+  src/types.ts              hand-mirrored protocol.py types + version guard
+  src/board.svg             hand-authored mimic one-line template
+  src/lib/                  ws, stores, annunciator machine, smoothing, audio
+  src/components/           Gauge, PistolGrip, Annunciator, ChartRecorder, ...
+  tests/                    vitest unit tests
 scripts/session_to_scenario.py
 ```

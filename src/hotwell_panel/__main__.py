@@ -2,12 +2,13 @@
 from __future__ import annotations
 
 import argparse
+import sys
 from pathlib import Path
 
 import uvicorn
 
 from hotwell_panel import scenarios as scenario_catalog
-from hotwell_panel.server import create_app
+from hotwell_panel.server import DIST, create_app
 from hotwell_panel.session import SimSession
 
 
@@ -30,6 +31,15 @@ def main() -> None:
             print(f"{s['ref']:<40} {s['load_mw']:>5.1f} MW  "
                   f"max_t {s['max_t']:>6.0f} s{flag}")
         return
+
+    if not (DIST / "index.html").is_file():
+        sys.exit(
+            "hotwell-panel: built client not found at "
+            f"{DIST}\n"
+            "Production serving needs the Svelte client built first:\n"
+            "    cd client && npm install && npm run build\n"
+            "(For development, run `vite dev` beside uvicorn instead — "
+            "see README.)")
 
     session = SimSession(local_scenarios=args.scenarios_dir,
                          sessions_dir=args.sessions_dir)

@@ -26,8 +26,11 @@ dev = [
 [tool.setuptools.packages.find]
 where = ["src"]
 
+# The built Svelte client (client/dist) is deliberately NOT packaged: the
+# panel is a run-from-checkout tool, and server.py resolves dist relative to
+# the checkout.
 [tool.setuptools.package-data]
-"hotwell_panel" = ["static/**/*", "*.yaml"]
+"hotwell_panel" = ["*.yaml"]
 
 [tool.ruff]
 line-length = 100

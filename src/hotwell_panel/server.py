@@ -15,7 +15,6 @@ from pathlib import Path
 from typing import Any
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
-from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from hotwell_panel import facegen
@@ -25,7 +24,11 @@ from hotwell_panel.protocol import ChartData, ProtocolError, encode, parse_clien
 from hotwell_panel.session import ENDED, RUNNING, SimSession
 
 WALL_HZ = 20.0
-STATIC = Path(__file__).parent / "static"
+#: The built Svelte client (§2). Resolved relative to the checkout — the panel
+#: is a run-from-checkout tool; `client/dist` is not packaged into the wheel.
+#: Dev mode does not use this at all: `vite dev` serves the client and proxies
+#: /ws here.
+DIST = Path(__file__).parents[2] / "client" / "dist"
 
 
 @dataclass
@@ -151,13 +154,6 @@ def create_app(session: SimSession | None = None, *, wall_hz: float = WALL_HZ,
     app.state.loop = loop
     app.state.assets = assets
 
-    @app.get("/")
-    async def index() -> FileResponse:
-        return FileResponse(STATIC / "index.html")
-
-    if STATIC.is_dir():
-        app.mount("/static", StaticFiles(directory=STATIC), name="static")
-
     @app.websocket("/ws")
     async def ws_endpoint(ws: WebSocket) -> None:
         await ws.accept()
@@ -175,6 +171,13 @@ def create_app(session: SimSession | None = None, *, wall_hz: float = WALL_HZ,
             pass
         finally:
             bus.discard(ws)
+
+    # Mounted after the routes above so /ws wins; html=True serves index.html
+    # at "/". When dist is absent (client not built) the API still runs — the
+    # protocol tests need no client — but `python -m hotwell_panel` refuses to
+    # start (§2); see __main__.
+    if DIST.is_dir():
+        app.mount("/", StaticFiles(directory=DIST, html=True), name="client")
 
     return app
 

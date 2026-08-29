@@ -2,9 +2,10 @@
 
 ## Status summary
 
-**P0–P3 code complete; the §12.6 human-playable gate is NOT signed off** — it
-requires a person at a browser and cannot be self-certified. See
-"§12.6 checklist" below for exactly what is automated and what is still open.
+**P0–P3 code complete, client migrated to Svelte 5 (2026-08-29); the §12.7
+human-playable gate is NOT signed off** — it requires a person at a browser and
+cannot be self-certified. See "§12.7 checklist" below for exactly what is
+automated and what is still open.
 
 Built against **`hotwell` 0.2.0** (the §11 precursor, `../hotwell` commit
 `c88af5d`). The panel consumes it as an installed dependency and never edits it.
@@ -16,10 +17,12 @@ Built against **`hotwell` 0.2.0** (the §11 precursor, `../hotwell` commit
 | P1 — the board lights up | complete | 17 gauges, 19 windows, live needles |
 | P2 — operate it | complete | full ISA sequence, grips, stations, manual trips |
 | P3 — diagnose it | complete | recorders with historian backfill, instructor station |
+| Svelte migration (updated §1) | complete | same browser suite green against the Svelte client; §12.5 client gate clean |
 | P4 — polish | **not started** (explicit go-ahead only, §13) | — |
 
-Suite: **95 passed**, ruff clean. 16 of those need Chromium and skip cleanly
-without it.
+Suite: **95 passed**, ruff clean, `svelte-check` 0/0, vitest 29 passed. The 16
+Chromium tests run against the **built** client served by `server.py` and skip
+cleanly when playwright or `client/dist` is absent.
 
 ## How to run
 
@@ -27,10 +30,37 @@ without it.
 uv venv .venv
 uv pip install -e ../hotwell
 uv pip install -e '.[dev]'
-.venv/bin/python -m pytest
-.venv/bin/python -m ruff check .
+cd client && npm install && npm run build && cd ..
+make check          # pytest + ruff + svelte-check + vitest (the §12 gate)
 .venv/bin/python -m hotwell_panel --scenario builtin:cp1_trip_unrecovered
 ```
+
+Dev mode is two processes (`make dev`): uvicorn on :8000 plus `vite dev` on
+:5173 with HMR, proxying `/ws`. Production is the single Python process above;
+it refuses to start without `client/dist`.
+
+## Svelte migration (2026-08-29)
+
+PLAN-panel.md §1 was revised to lock **Svelte 5 + TypeScript + Vite (runes
+mode, plain SPA)** in place of the original vanilla-JS decision the P0–P3 build
+followed. The client was ported wholesale (`client/`), the server now mounts
+`client/dist`, and `static/` is deleted. Contracts, protocol, replay, and all
+server code except the static-serving block are untouched. Details, decisions,
+and per-phase verification: `.plan-checkpoint.md` and `progress-20260829.md`.
+
+- **One behavioral addition** (required by §4): the client now *refuses to run*
+  on a `protocol_version` mismatch (full-screen refusal, no reconnect). The
+  vanilla client only logged it.
+- **One test-contract change** (required by §5.2): faces are `{@html}`-injected
+  inside `Gauge`, so the smoke test now asserts 23 faces in `hello.gauge_faces`
+  and 17 placed faces in the DOM, replacing the old `#face-defs > g == 23`.
+- Browser tests were otherwise kept verbatim; `window.panel` and the DOM
+  contract (`data-element`/`data-alarm`/`data-instrument`, class names,
+  instructor ids, swappable `conn.handlers`) are preserved deliberately.
+- `client/dist` is **not** wheel-packaged (run-from-checkout decision).
+- Node dev deps pinned: svelte 5.57.0, vite-plugin-svelte 6.2.4, vite 7.3.6,
+  typescript 5.9.3, svelte-check 4.7.6, vitest 4.1.11 (svelte-check 4.x
+  excludes TS 7; plugin 7.x needs vite 8 — avoided the brand-new majors).
 
 ## Screenshots
 
@@ -40,17 +70,24 @@ uv pip install -e '.[dev]'
 | P2, board with controls | `docs/img/p2_board_steady.png` |
 | P2, mid-casualty | `docs/img/p2_casualty.png` |
 | P3, recorders + instructor drawer | `docs/img/p3_board.png` |
+| Svelte client, mid-casualty | `docs/img/m2_svelte_board.png` |
 
 The mid-casualty shot is the useful one: eight annunciator windows lit with
 trip-class in red, the FIRST OUT plate reading `CP1_TRIP:OVERLOAD`, the SOE log
 printing the sequence, and the drum-level gauge at **+14.8 in** — D18's
 inverted level response visible on the glass before the plant shrinks.
 
-## §12.6 checklist — the manual gate
+## §12.7 checklist — the manual gate
+
+(Previously "§12.6": the 2026-08-29 plan revision inserted the client gate as
+§12 item 5, shifting the Playwright smoke test to §12.6 and this checklist to
+§12.7. Older references in progress logs and commit messages use the old
+numbers.)
 
 **This is not signed off.** Items marked *automated* have a test asserting the
 observable content; that is not the same as a person having played the panel.
-Items marked *open* need Alan at a browser.
+Items marked *open* need Alan at a browser. Per the migration agreement, this
+gate is to be performed on the Svelte client now that the port is complete.
 
 - [x] **(a) automated** — unrecovered casualty, no operator action, exact
   annunciator/SOE sequence with correct first-out.
@@ -88,8 +125,8 @@ Items marked *open* need Alan at a browser.
 
 Recorded rather than resolved unilaterally (§14 ask-vs-decide).
 
-1. **§1 vs §12.6(a) — default fidelity.** §1 locks the panel default to
-   `astrom_bell` + three-element. §12.6(a) asks for "the exact annunciator/SOE
+1. **§1 vs §12.7(a) — default fidelity.** §1 locks the panel default to
+   `astrom_bell` + three-element. §12.7(a) asks for "the exact annunciator/SOE
    sequence from the phase-1 handoff table" — but that table was measured on
    `two_state` + single-element, phase 1's default. Both cannot describe one run.
    Delivered both, and the default is left as §1 specifies:
@@ -110,7 +147,7 @@ Recorded rather than resolved unilaterally (§14 ask-vs-decide).
    The AB column is not a bug: losing feed reduces in-drum condensation, so level
    **rises** first (D18) and the plant trips on high-high level long before
    low-low. Arguably the better training scenario, but it is a different one.
-   **Which is the §12.6(a) acceptance target is Alan's call.**
+   **Which is the §12.7(a) acceptance target is Alan's call.**
 
 2. **§5.1's 611 klb/hr steam anchor is unreachable on the panel.** `steam_flow`
    quantizes to 0.1 kg/s in the observation contract, so the display is handed

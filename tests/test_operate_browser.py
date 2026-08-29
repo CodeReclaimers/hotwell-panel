@@ -24,8 +24,12 @@ playwright_api = pytest.importorskip(
 
 import uvicorn  # noqa: E402
 
-from hotwell_panel.server import create_app  # noqa: E402
+from hotwell_panel.server import DIST, create_app  # noqa: E402
 from hotwell_panel.session import SimSession  # noqa: E402
+
+if not (DIST / "index.html").is_file():
+    pytest.skip("client/dist not built (cd client && npm run build)",
+                allow_module_level=True)
 
 
 def _free_port() -> int:
