@@ -53,14 +53,6 @@ html, body {
   text-transform: none;
 }
 
-/* M0 scaffold readout only; removed with the M2 board. */
-.m0-note {
-  fill: var(--plate-text);
-  font-size: 18px;
-  text-anchor: middle;
-  letter-spacing: 0.12em;
-}
-
 #board-wrap {
   width: 100%;
   /* Leave room for the status bar AND the collapsed instructor drawer, which

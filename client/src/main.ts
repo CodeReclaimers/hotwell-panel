@@ -13,8 +13,10 @@ import { mount } from 'svelte';
 import App from './App.svelte';
 import { annunciator } from './lib/annunciator.svelte';
 import * as audio from './lib/audio';
+import { dispatchChartData } from './lib/chartdata';
 import { soe } from './lib/events.svelte';
 import { store } from './lib/frame.svelte';
+import { charts, gauges } from './lib/registry';
 import { Connection } from './lib/ws';
 import { protocolMismatch } from './types';
 import './panel.css';
@@ -35,10 +37,12 @@ const conn = new Connection({
       console.error(refusal);
       return;
     }
-    store.setHello(msg);
+    // Install machine state BEFORE publishing the hello: the board remounts
+    // on `store.hello`, and its first render reads the machine.
     annunciator.install(msg.annunciator);
     soe.reset();
     seeded = false;
+    store.setHello(msg);
     console.info('hello: hotwell', msg.hotwell_version,
                  '| protocol', msg.protocol_version,
                  '| obs digest', msg.obs_spec_digest);
@@ -67,8 +71,8 @@ const conn = new Connection({
   action_result: (msg) => {
     if (!msg.accepted) console.warn('action rejected:', msg.command, msg.reason);
   },
-  chart_data: () => {},     // M2: chart recorders
-  session_exported: () => {},
+  chart_data: (m) => dispatchChartData(m),
+  session_exported: (m) => { store.sessionExported = m; },
   error: (m) => console.error('protocol error:', m.reason),
   info: () => {},
   status: (s) => {
@@ -77,17 +81,45 @@ const conn = new Connection({
   },
 });
 
+/**
+ * The annunciator control buttons (§7). SILENCE stops the horn but leaves the
+ * windows flashing; ACK sends one `alarm.ack` per flashing window and takes
+ * them steady; RESET drops ringing-back windows dark; LAMP TEST is held.
+ */
+const annHandlers = {
+  silence: () => {
+    audio.silence();
+    audio.click();
+  },
+  ack: () => {
+    // Only currently-ACTIVE ids: the core rejects an ack for anything else,
+    // and the SOE log would fill with spurious rejections.
+    for (const id of annunciator.flashing()) conn.action({ 'alarm.ack': id });
+    audio.silence();
+    audio.click();
+  },
+  reset: () => {
+    annunciator.reset();
+    audio.click();
+  },
+  lamp_test: () => {},
+  lamp_test_on: () => annunciator.setLampTest(true),
+  lamp_test_off: () => annunciator.setLampTest(false),
+};
+
 // Browsers require a user gesture before audio; arm it on the first click.
 window.addEventListener('pointerdown', () => audio.unlock(), { once: true });
 
 conn.connect();
-mount(App, { target: document.getElementById('app')! });
+mount(App, {
+  target: document.getElementById('app')!,
+  props: { conn, handlers: annHandlers },
+});
 
-// Exposed for the Playwright suite and for poking at a live board. Widget
-// registries (gauges, charts) join in M2.
+// Exposed for the Playwright suite and for poking at a live board.
 declare global {
   interface Window {
     panel: Record<string, unknown>;
   }
 }
-window.panel = { store, conn, annunciator, audio, soe };
+window.panel = { store, conn, annunciator, audio, soe, gauges, charts };

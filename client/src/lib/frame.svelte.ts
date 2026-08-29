@@ -19,6 +19,7 @@ import type {
   FrameMsg,
   HelloMsg,
   ManifestElement,
+  SessionExportedMsg,
 } from '../types';
 
 export class PanelStore {
@@ -28,6 +29,8 @@ export class PanelStore {
   connected = $state(false);
   /** §4 protocol refusal (or another unrecoverable fault): set once, fatal. */
   fatal = $state<string | null>(null);
+  /** Last `session_exported` echo, shown on the instructor station (§9). */
+  sessionExported = $state.raw<SessionExportedMsg | null>(null);
   /** Frames received since the FPS readout last sampled; plain counter. */
   framesReceived = 0;
 
