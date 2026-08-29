@@ -7,8 +7,17 @@ human-playable gate is NOT signed off** — it requires a person at a browser an
 cannot be self-certified. See "§12.7 checklist" below for exactly what is
 automated and what is still open.
 
-Built against **`hotwell` 0.2.0** (the §11 precursor, `../hotwell` commit
-`c88af5d`). The panel consumes it as an installed dependency and never edits it.
+Built against **`hotwell` 0.3.0** (station-service pump loads, `../hotwell`
+commit `9464eb2`; previously 0.2.0 `c88af5d`). The panel consumes it as an
+installed dependency and never edits it — 0.3.0 was executed as its own task
+in the core repo at Alan's direction (2026-08-29) after panel play showed
+pump starts not moving the MW meter. Panel-side effect: the two-state
+casualty-table pins were re-measured (every event within 0.3 s, sequence and
+first-out unchanged); display anchors and the §5.1 table are untouched by
+design. FP-2 start now reads ~+0.3 MW on the GEN OUTPUT meter; a condensate
+pump start is +0.02 MW — real but below the meter's 0.1 MW resolution (the
+ammeter is the visible cue). 0.2.0 session logs no longer replay to their
+recorded hashes (physics change).
 
 | Milestone | State | Evidence |
 |---|---|---|
@@ -131,17 +140,21 @@ Recorded rather than resolved unilaterally (§14 ask-vs-decide).
    `two_state` + single-element, phase 1's default. Both cannot describe one run.
    Delivered both, and the default is left as §1 specifies:
 
+   (Re-measured 2026-08-29 under hotwell 0.3.0 station-service loads — every
+   entry moved ≤ 0.7 s, ordering unchanged. Source: `pytest
+   tests/test_casualty_sequence.py -s`.)
+
    | | two_state + 1E | AB + 3E (panel default) |
    |---|---|---|
-   | DRUM_P_HI | +19.85 s | — (AB storage damps it) |
+   | DRUM_P_HI | +19.60 s | — (AB storage damps it) |
    | DA_LO | +23.15 | +21.95 |
-   | HOTWELL_HI | +57.15 | +57.15 |
-   | FP1_SUCTION trip | +92.65 | +77.85 |
-   | SAFETY_VALVE | +98.00 | +99.75 |
-   | DRUM_LVL_**HI** | — | +88.70 |
-   | DRUM_LVL_**HIHI** → turbine trip | — | +101.10 |
-   | DRUM_LVL_LO | +112.45 | +202.25 |
-   | DRUM_LVL_LOLO → MFT, plant dead | +127.35 | +222.75 |
+   | HOTWELL_HI | +57.25 | +57.20 |
+   | FP1_SUCTION trip | +92.80 | +77.90 |
+   | SAFETY_VALVE | +98.00 | +99.05 |
+   | DRUM_LVL_**HI** | — | +89.10 |
+   | DRUM_LVL_**HIHI** → turbine trip | — | +100.50 |
+   | DRUM_LVL_LO | +112.50 | +202.45 |
+   | DRUM_LVL_LOLO → MFT, plant dead | +127.30 | +222.90 |
 
    The two_state column reproduces the handoff table to within its own rounding.
    The AB column is not a bug: losing feed reduces in-drum condensation, so level

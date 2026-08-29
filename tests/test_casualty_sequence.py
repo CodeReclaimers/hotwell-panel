@@ -60,20 +60,28 @@ def firsts(seq, kind, state=None):
 
 
 def test_handoff_sequence_under_two_state():
-    """Reproduces the phase-1 HANDOFF casualty table exactly (±0.1 s)."""
+    """Reproduces the core HANDOFF casualty table exactly (±0.1 s).
+
+    Re-pinned 2026-08-29 for hotwell 0.3.0 (station-service pump loads):
+    every event moved ≤ 0.3 s from the phase-1 table; sequence and first-out
+    unchanged. Regenerate the reference with
+    ``python scripts/run_scenario.py cp1_trip_unrecovered --events`` in the
+    core repo.
+    """
     s, seq = run_casualty(TWO_STATE)
     alarms = firsts(seq, "alarm", "active")
     trips = firsts(seq, "first_out")
 
-    # HANDOFF "Achieved casualty timings vs targets", relative to the CP-1 trip.
+    # Core HANDOFF "Achieved casualty timings vs targets" (0.3.0), relative
+    # to the CP-1 trip.
     expected = {
-        "DRUM_P_HI": 19.9,      # pegging-steam demand lost, transient
+        "DRUM_P_HI": 19.6,      # pegging-steam demand lost, transient
         "DA_LO": 23.2,          # DA draining
-        "HOTWELL_HI": 57.2,     # condensate backing up
-        "FP1_SUCTION": 92.7,    # NPSH margin < 0.5 m sustained 5 s
+        "HOTWELL_HI": 57.3,     # condensate backing up
+        "FP1_SUCTION": 92.8,    # NPSH margin < 0.5 m sustained 5 s
         "SAFETY_VALVE": 98.0,   # feed lost at full steam draw
         "DRUM_LVL_LO": 112.5,
-        "DRUM_LVL_LOLO": 127.4,  # -> MFT + turbine trip -> bus dead
+        "DRUM_LVL_LOLO": 127.3,  # -> MFT + turbine trip -> bus dead
     }
     print("\n  event            handoff   observed    delta")
     for aid, want in expected.items():
