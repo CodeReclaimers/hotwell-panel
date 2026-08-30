@@ -24,7 +24,15 @@
   <circle class="pump" data-pump="cp1" cx="142" cy="196" r="8"/>
   <circle class="pump" data-pump="cp2" cx="142" cy="216" r="8"/>
   <text class="tag" x="142" y="182">CP 1/2</text>
-  <path class="flow-line" data-flow="condensate_flow" d="M160 196 H232"/>
+  <path class="flow-line" data-flow="condensate_flow" d="M160 196 H188"/>
+  <!-- DA level control valve: the DA LEVEL loop's actuator (position on that
+       station's OUT meter). Sits between CP discharge and the DA inlet,
+       exactly where plant.py's condensate path solve puts cv_lcv. -->
+  <g class="valve">
+    <path d="M188 189 L204 203 L204 189 L188 203 Z"/>
+    <text class="tag" x="196" y="182">LCV</text>
+  </g>
+  <path class="flow-line" data-flow="condensate_flow" d="M204 196 H232"/>
 
   <!-- ================================================== feedwater / DA === -->
   <rect class="vessel" x="232" y="184" width="64" height="24" rx="3"/>
