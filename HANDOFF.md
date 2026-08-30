@@ -83,10 +83,11 @@ and per-phase verification: `.plan-checkpoint.md` and `progress-20260829.md`.
 | Current board (lamp sense flipped, 2026-08-30) | `docs/img/board_current.png` |
 
 **Lamp convention (flipped 2026-08-30, plan §10 updated):** red = stopped
-pump / closed valve or breaker, green = running / open, amber = tripped —
-Alan's operator experience. All pre-flip screenshots above show the original
-red=running sense. Event lamps (SV OPEN, MFT, TURB TRIP) remain red-when-lit:
-abnormal-event indications, not position pairs.
+pump / closed valve, green = running / open, amber = tripped — Alan's
+operator experience. Breakers: green = closed, black (dark lens) = open.
+All pre-flip screenshots above show the original red=running sense. Event
+lamps (SV OPEN, MFT, TURB TRIP) remain red-when-lit: abnormal-event
+indications, not position pairs.
 
 The mid-casualty shot is the useful one: eight annunciator windows lit with
 trip-class in red, the FIRST OUT plate reading `CP1_TRIP:OVERLOAD`, the SOE log

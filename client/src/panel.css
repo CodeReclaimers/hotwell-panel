@@ -10,10 +10,11 @@
   --plate-text:   #eceae2;
   --dial:         #f2edd8;   /* ivory gauge face */
   --ink:          #1a1a1a;
-  --lamp-red:     #e33f2c;   /* stopped pump / closed valve or breaker (Alan's
-                                operator convention, flipped 2026-08-30) */
-  --lamp-green:   #35c46a;   /* running pump / open */
+  --lamp-red:     #e33f2c;   /* stopped pump / closed valve (Alan's operator
+                                convention, flipped 2026-08-30) */
+  --lamp-green:   #35c46a;   /* running pump / open valve / CLOSED breaker */
   --lamp-amber:   #f0a93b;   /* tripped / abnormal */
+  /* breakers: green = closed, dark ("black") = open — per Alan 2026-08-30 */
   --lamp-dark:    #2a2f2c;
   --window-dark:  #d8d9cf;   /* annunciator window, unlit */
   --window-alarm: #f2b134;
@@ -192,11 +193,11 @@ html, body {
 #layer-mimic .sv-stack { fill: var(--lamp-dark); stroke: #cfd8d3; stroke-width: 1; }
 #layer-mimic .sv-stack.on { fill: var(--lamp-red); }
 #layer-mimic .breaker-sym rect {
-  fill: var(--lamp-green);
+  fill: var(--lamp-dark);            /* open = black */
   stroke: #cfd8d3;
   stroke-width: 1.5;
 }
-#layer-mimic .breaker-sym.closed rect { fill: var(--lamp-red); }
+#layer-mimic .breaker-sym.closed rect { fill: var(--lamp-green); }
 
 /* ------------------------------------------------------------- lamps */
 
@@ -317,8 +318,8 @@ html, body {
   stroke: #0c0f0e;
   stroke-width: 1.5;
 }
-.breaker-lens.closed { fill: var(--lamp-red); }     /* red = closed */
-.breaker-lens.open   { fill: var(--lamp-green); }
+.breaker-lens.closed { fill: var(--lamp-green); }   /* green = closed */
+.breaker-lens.open   { fill: var(--lamp-dark); }    /* black = open */
 .breaker-state {
   fill: var(--plate-text);
   font-size: 8px;
