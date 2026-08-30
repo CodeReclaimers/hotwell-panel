@@ -10,8 +10,9 @@
   --plate-text:   #eceae2;
   --dial:         #f2edd8;   /* ivory gauge face */
   --ink:          #1a1a1a;
-  --lamp-red:     #e33f2c;   /* running / energised (power plant convention) */
-  --lamp-green:   #35c46a;   /* stopped / deenergised */
+  --lamp-red:     #e33f2c;   /* stopped pump / closed valve or breaker (Alan's
+                                operator convention, flipped 2026-08-30) */
+  --lamp-green:   #35c46a;   /* running pump / open */
   --lamp-amber:   #f0a93b;   /* tripped / abnormal */
   --lamp-dark:    #2a2f2c;
   --window-dark:  #d8d9cf;   /* annunciator window, unlit */
@@ -172,12 +173,14 @@ html, body {
 #layer-mimic .flow-line.reverse.flowing { animation-direction: reverse; }
 @keyframes march { to { stroke-dashoffset: -12; } }
 
+/* Stopped = red, running = green (Alan's operator convention): the base
+   class is the stopped state, so an idle pump reads red like its grip lamp. */
 #layer-mimic .pump {
-  fill: var(--lamp-dark);
+  fill: var(--lamp-red);
   stroke: #cfd8d3;
   stroke-width: 1.5;
 }
-#layer-mimic .pump.running { fill: var(--lamp-red); }
+#layer-mimic .pump.running { fill: var(--lamp-green); }
 #layer-mimic .pump.tripped { fill: var(--lamp-amber); }
 
 #layer-mimic .valve path { fill: #55655e; stroke: #cfd8d3; stroke-width: 1.5; }
@@ -314,8 +317,8 @@ html, body {
   stroke: #0c0f0e;
   stroke-width: 1.5;
 }
-.breaker-lens.closed { fill: var(--lamp-red); }     /* energised */
-.breaker-lens.open   { fill: var(--lamp-green); }   /* deenergised */
+.breaker-lens.closed { fill: var(--lamp-red); }     /* red = closed */
+.breaker-lens.open   { fill: var(--lamp-green); }
 .breaker-state {
   fill: var(--plate-text);
   font-size: 8px;

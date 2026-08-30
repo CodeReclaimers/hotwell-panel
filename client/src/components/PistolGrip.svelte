@@ -5,9 +5,9 @@
    * **on release**, as a real spring-return switch does. Mouse (click-and-hold
    * left/right of the pivot) or keyboard (focus, hold Left or Right arrow).
    *
-   * Lamps read from `indications`, which phase 1 guarantees honest: red =
-   * running, green = stopped, amber = tripped — the power plant convention,
-   * not the traffic-light one (§10).
+   * Lamps read from `indications`, which phase 1 guarantees honest: green =
+   * running, red = stopped, amber = tripped — Alan's operator convention
+   * (red = off for pumps; §10, flipped 2026-08-30).
    */
   import { store } from '../lib/frame.svelte';
   import type { Connection } from '../lib/ws';
@@ -30,7 +30,7 @@
     if (!store.frame) return 'lamp-lens';
     const running = store.indication(o.running_indication ?? '');
     const tripped = store.indication(o.tripped_indication ?? '');
-    return `lamp-lens ${tripped ? 'amber' : running ? 'red' : 'green'}`;
+    return `lamp-lens ${tripped ? 'amber' : running ? 'green' : 'red'}`;
   });
 
   function release(): void {

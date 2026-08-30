@@ -98,7 +98,8 @@ def test_pistol_grip_starts_the_standby_pump(board):
         timeout=10000)
     lamp = page.get_attribute('[data-element="grip_cp2"] .lamp-lens', "class")
     print(f"\n  CP-2 lamp after start: {lamp!r}")
-    assert "red" in lamp, "a running pump shows RED (power plant convention)"
+    # Alan's operator convention (2026-08-30): red = off, so running = GREEN.
+    assert "green" in lamp, "a running pump shows GREEN (red = off)"
     assert session.sim.disc.pump_modes["cp2"] == "running"
     assert page.errors == []
 
@@ -111,7 +112,7 @@ def test_pistol_grip_stops_a_running_pump(board):
         timeout=10000)
     lamp = page.get_attribute('[data-element="grip_cp1"] .lamp-lens', "class")
     print(f"\n  CP-1 lamp after stop: {lamp!r}")
-    assert "green" in lamp, "a stopped pump shows GREEN"
+    assert "red" in lamp, "a stopped pump shows RED (Alan's operator convention)"
 
 
 # ------------------------------------------- (f) rejections reach the log
