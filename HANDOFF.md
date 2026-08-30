@@ -82,6 +82,17 @@ and per-phase verification: `.plan-checkpoint.md` and `progress-20260829.md`.
 | Svelte client, mid-casualty | `docs/img/m2_svelte_board.png` |
 | Current board (lamp sense flipped, 2026-08-30) | `docs/img/board_current.png` |
 
+**Mimic-completeness gate (added 2026-08-30):** `tests/test_mimic.py`
+validates `client/src/board.svg` against the installed hotwell — the
+required-symbol set is derived from the plant config (a new pump class,
+`cv_*` valve, or actuator fails until drawn or explicitly waived with a
+reason), `data-*` hooks must name live contract keys, and every
+flow-line/pipe/shaft endpoint must land on a symbol, another line, or a
+labeled terminal (±2 px). Motivated by two real omissions Alan spotted
+(missing LCV, condenser off the exhaust run); the gate was verified to FAIL
+on the pre-fix board from git history — it reports the missing LCV label and
+exactly one dangling endpoint at (852, 222).
+
 **Lamp convention (flipped 2026-08-30, plan §10 updated):** red = stopped
 pump / closed valve, green = running / open, amber = tripped — Alan's
 operator experience. Breakers: green = closed, black (dark lens) = open.
