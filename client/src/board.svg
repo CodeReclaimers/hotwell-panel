@@ -82,14 +82,15 @@
   <path class="pipe" d="M816 196 H836"/>
   <text class="tag" x="846" y="199">BUS</text>
 
-  <!-- exhaust down to the condenser -->
+  <!-- exhaust down to the condenser, entering it on centerline (y=222):
+       the electrical row (GEN/breaker/BUS) stays above, the condenser sits
+       on the exhaust run below it. -->
   <path class="flow-line" data-flow="steam_flow" d="M724 212 V222 H852"/>
-  <rect class="vessel" x="852" y="184" width="56" height="24" rx="3"/>
-  <text class="vessel-label small" x="880" y="199">COND</text>
-  <path class="pipe" d="M880 208 V222"/>
+  <rect class="vessel" x="852" y="210" width="56" height="24" rx="3"/>
+  <text class="vessel-label small" x="880" y="225">COND</text>
 
   <!-- condensate return, right to left, back to the hotwell -->
   <path class="flow-line return" data-flow="condensate_flow"
-        d="M880 222 H908 V234 H52 V208"/>
-  <text class="tag return-tag" x="470" y="231">CONDENSATE RETURN</text>
+        d="M880 234 V240 H52 V208"/>
+  <text class="tag return-tag" x="470" y="237">CONDENSATE RETURN</text>
 </g>
