@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=68"]
+requires = ["setuptools>=77"]  # PEP 639 license expression
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -7,11 +7,19 @@ name = "hotwell-panel"
 version = "0.1.0"
 description = "1970s-era steam plant control panel for the hotwell simulation core"
 requires-python = ">=3.11"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "Alan McIntyre" }]
 dependencies = [
-    "hotwell>=0.3,<0.4",
+    # Pinned to a GitHub tag: hotwell is not on PyPI, and a bare name would
+    # resolve against PyPI (and whoever later registers it there).
+    "hotwell @ git+https://github.com/CodeReclaimers/hotwell@v0.3.0",
     "fastapi",
     "uvicorn[standard]",
 ]
+
+[project.urls]
+Repository = "https://github.com/CodeReclaimers/hotwell-panel"
 
 [project.optional-dependencies]
 dev = [

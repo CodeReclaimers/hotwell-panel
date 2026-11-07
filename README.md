@@ -1,6 +1,6 @@
 # hotwell-panel
 
-A 1970s-era US power-plant control board for the [`hotwell`](../hotwell) steam
+A 1970s-era US power-plant control board for the [`hotwell`](https://github.com/CodeReclaimers/hotwell) steam
 plant simulation core: annunciator array, mimic diagram with analog gauges and
 pistol-grip switches, manual/auto controller stations, chart recorders, a
 sequence-of-events log, and an instructor station.
@@ -12,14 +12,18 @@ the built client mounted by FastAPI.
 `hotwell` is consumed strictly as an installed dependency; this repository never
 edits it.
 
-## Dev setup (two repos, checked out side by side)
+## Dev setup
 
 ```bash
 uv venv .venv
-uv pip install -e ../hotwell          # the core, as a dependency
-uv pip install -e '.[dev]'
+uv pip install -e '.[dev]'            # also installs the pinned hotwell tag
 cd client && npm install && cd ..     # node dev deps, version-pinned
 ```
+
+The core comes from the GitHub tag pinned in `pyproject.toml`, installed
+non-editable. Do not `pip install -e ../hotwell` into this venv: it silently
+re-points the panel at whatever the core checkout has on disk, including
+unreleased changes the panel has not been migrated to.
 
 Development runs two processes — uvicorn for the sim/WebSocket and `vite dev`
 for the client with HMR (it proxies `/ws` to :8000):
@@ -100,3 +104,7 @@ client/                     Svelte 5 + TS + Vite SPA
   tests/                    vitest unit tests
 scripts/session_to_scenario.py
 ```
+
+## License
+
+MIT. See [LICENSE](LICENSE).

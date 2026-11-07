@@ -37,8 +37,7 @@ cleanly when playwright or `client/dist` is absent.
 
 ```bash
 uv venv .venv
-uv pip install -e ../hotwell
-uv pip install -e '.[dev]'
+uv pip install -e '.[dev]'   # pulls the hotwell tag pinned in pyproject.toml
 cd client && npm install && npm run build && cd ..
 make check          # pytest + ruff + svelte-check + vitest (the §12 gate)
 .venv/bin/python -m hotwell_panel --scenario builtin:cp1_trip_unrecovered
